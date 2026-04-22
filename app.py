@@ -35,6 +35,7 @@ st.markdown("""
     .main { background-color: #0B0E14; }
     .gold-text { color: #FFD700; font-weight: 800; text-align: center; margin-bottom: 0px;}
     .yellow-status { color: #FFD700; font-family: 'Courier New', Courier, monospace; line-height: 1.6; background-color: #1A1C23; padding: 15px; border-radius: 8px; border-left: 4px solid #FFD700; margin-bottom: 20px; font-size: 14px;}
+    .blue-status { color: #00E5FF; font-family: 'Courier New', Courier, monospace; line-height: 1.6; background-color: #1A1C23; padding: 15px; border-radius: 8px; border-left: 4px solid #00E5FF; margin-bottom: 20px; font-size: 14px;}
     .cyan-note { color: #00E5FF; font-family: 'Courier New', Courier, monospace; background-color: #1A1C23; padding: 12px; border-radius: 8px; border-left: 4px solid #00E5FF; margin-top: 15px; margin-bottom: 20px; font-size: 14px;}
     .log-card { background-color: #16181D; padding: 10px 15px; border-radius: 5px; margin-bottom: 5px; font-family: 'Courier New', Courier, monospace; font-size: 13px; border: 1px solid #2D3748;}
     .sub-text { color: #A0AEC0; text-align: center; font-size: 14px; margin-bottom: 20px;}
@@ -42,6 +43,7 @@ st.markdown("""
     .premium-box { background-color: #000000; border: 1px solid #555; border-radius: 8px; padding: 20px 10px; text-align: center; margin-bottom: 15px;}
     .premium-num { font-size: 26px; color: #FFFFFF; font-weight: 900; letter-spacing: 2px; }
     .main-num-box { font-size: 40px; color: #FFD700; font-weight: 900; background: #1A1C23; padding: 15px 30px; border-radius: 10px; border: 2px solid #FFD700; display: inline-block; margin: 10px;}
+    .sec-num-box { font-size: 22px; color: #A0AEC0; font-weight: bold; background: #1A1C23; padding: 8px 18px; border-radius: 8px; border: 1px solid #555; display: inline-block; margin: 5px;}
     
     .super-box { background: linear-gradient(145deg, #1A1C23, #0B0E14); border: 2px solid #FFD700; border-radius: 12px; padding: 25px 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);}
     .super-num { font-size: 34px; color: #FFD700; font-weight: 900; letter-spacing: 3px; background-color: #000; padding: 10px 20px; border-radius: 8px; margin: 0 10px; display: inline-block; border: 1px solid rgba(255,215,0,0.5);}
@@ -119,8 +121,10 @@ def run_backend_engine(timeline, test_size):
         cm_idx = [x[0]-1 for x in sorted_ranks_cold[:2]]
         cs_idx = [x[0]-1 for x in sorted_ranks_cold[2:5]]
 
-        stats, cold_stats = {'m_hit':0}, {'m_hit':0}
+        stats = {'m_hit':0, 's_hit':0, 'jp_12':0, 'mm_2':0, 'ss_6':0}
+        cold_stats = {'m_hit':0, 's_hit':0, 'jp_12':0, 'mm_2':0, 'ss_6':0}
         mains_hist, secs_hist, cm_hist, cs_hist = [], [], [], []
+        hot_logs, cold_logs = [], []
 
         for i, draw in enumerate(actuals):
             preds = raw_hist[i]
@@ -134,10 +138,31 @@ def run_backend_engine(timeline, test_size):
             cm_hist.append(cm_l)
             cs_hist.append(cs_l)
 
+            def get_status(draw, main_g, sec_g, st_dict):
+                jp_pairs = generate_pairs(main_g, sec_g)
+                mm_pairs = generate_pairs(main_g)
+                ss_pairs = generate_pairs(sec_g)
+                is_m = draw[0] in main_g or draw[1] in main_g
+                is_s = draw[0] in sec_g or draw[1] in sec_g
+
+                if draw in jp_pairs or draw[::-1] in jp_pairs: st_dict['jp_12'] += 1; return "🔥 12-PAIR JACKPOT!"
+                elif draw in mm_pairs or draw[::-1] in mm_pairs: st_dict['mm_2'] += 1; return "👑 MAIN-MAIN JACKPOT!"
+                elif draw in ss_pairs or draw[::-1] in ss_pairs: st_dict['ss_6'] += 1; return "💰 SEC-SEC JACKPOT!"
+                elif is_m and not is_s: st_dict['m_hit'] += 1; return "💎 MAIN HIT"
+                elif is_s and not is_m: st_dict['s_hit'] += 1; return "⭐ SEC HIT"
+                return "❌ Missed"
+
+            s1 = get_status(draw, m_l, s_l, stats)
+            s2 = get_status(draw, cm_l, cs_l, cold_stats)
+            hot_logs.append(f"ပွဲ {i+1:02d} | အဖြေမှန်: [{draw}] | Main {m_l} x Sec {s_l} | ရလဒ်: {s1}")
+            cold_logs.append(f"ပွဲ {i+1:02d} | အဖြေမှန်: [{draw}] | Main {cm_l} x Sec {cs_l} | ရလဒ်: {s2}")
+
         return {
             'm_idx': m_idx, 's_idx': s_idx, 'cm_idx': cm_idx, 'cs_idx': cs_idx,
             'sorted_ranks': sorted_ranks, 'sorted_ranks_cold': sorted_ranks_cold,
-            'mains_hist': mains_hist, 'secs_hist': secs_hist, 'cm_hist': cm_hist
+            'stats': stats, 'cold_stats': cold_stats,
+            'hot_logs': list(reversed(hot_logs)), 'cold_logs': list(reversed(cold_logs)),
+            'mains_hist': mains_hist, 'secs_hist': secs_hist, 'cm_hist': cm_hist, 'cs_hist': cs_hist
         }
 
     m1_eval = evaluate_mode(m1_raw_history, actuals)
@@ -163,9 +188,13 @@ def run_backend_engine(timeline, test_size):
 
     m1_next_m = [m1_next_raw[i] for i in m1_eval['m_idx'] if i < len(m1_next_raw)]
     m1_next_s = [m1_next_raw[i] for i in m1_eval['s_idx'] if i < len(m1_next_raw)]
+    m1_next_cm = [m1_next_raw[i] for i in m1_eval['cm_idx'] if i < len(m1_next_raw)]
+    m1_next_cs = [m1_next_raw[i] for i in m1_eval['cs_idx'] if i < len(m1_next_raw)]
     
     m2_next_m = [m2_next_raw[i] for i in m2_eval['m_idx'] if i < len(m2_next_raw)]
     m2_next_s = [m2_next_raw[i] for i in m2_eval['s_idx'] if i < len(m2_next_raw)]
+    m2_next_cm = [m2_next_raw[i] for i in m2_eval['cm_idx'] if i < len(m2_next_raw)]
+    m2_next_cs = [m2_next_raw[i] for i in m2_eval['cs_idx'] if i < len(m2_next_raw)]
 
     m3_scores = {str(k): 0 for k in range(10)}
     for k in range(10):
@@ -177,14 +206,16 @@ def run_backend_engine(timeline, test_size):
     m3_next_raw = [x[0] for x in sorted(m3_scores.items(), key=lambda x: x[1], reverse=True)]
 
     m3_next_m = [m3_next_raw[i] for i in m3_eval['m_idx'] if i < len(m3_next_raw)]
+    m3_next_s = [m3_next_raw[i] for i in m3_eval['s_idx'] if i < len(m3_next_raw)]
+    m3_next_cm = [m3_next_raw[i] for i in m3_eval['cm_idx'] if i < len(m3_next_raw)]
+    m3_next_cs = [m3_next_raw[i] for i in m3_eval['cs_idx'] if i < len(m3_next_raw)]
 
     return {
         'm1': m1_eval, 'm2': m2_eval, 'm3': m3_eval,
-        'm1_next': {'m': m1_next_m, 's': m1_next_s},
-        'm2_next': {'m': m2_next_m, 's': m2_next_s},
+        'm1_next': {'m': m1_next_m, 's': m1_next_s, 'cm': m1_next_cm, 'cs': m1_next_cs},
+        'm2_next': {'m': m2_next_m, 's': m2_next_s, 'cm': m2_next_cm, 'cs': m2_next_cs},
+        'm3_next': {'m': m3_next_m, 's': m3_next_s, 'cm': m3_next_cm, 'cs': m3_next_cs},
         'm3_next_raw': m3_next_raw,
-        'm1_hot_5': m1_next_m + m1_next_s,
-        'm3_main_2': m3_next_m,
         'test_size': test_size,
         'actuals': actuals
     }
@@ -323,31 +354,29 @@ if st.session_state.get('run_v13'):
         st.info(f"✍️ **Custom Mode:** Admin ရိုက်ထည့်ထားသော ({lb_p}) ပွဲစာ ရေစီးကြောင်းဖြင့် တွက်ချက်ထားပါသည်။")
 
     # --- 💎 Collision Resolution (The Ultimate Hybrid) ---
-    super_hot_2 = res_l['m3_main_2']
+    super_hot_2 = res_l['m3_next']['m']
     
     # Get the preferred cold sequence (Main Cold + Sec Cold)
     pref_cold_idx = res_c['m3']['cm_idx'] + res_c['m3']['cs_idx']
     raw_cold_nums = [res_c['m3_next_raw'][i] for i in pref_cold_idx if i < len(res_c['m3_next_raw'])]
     
-    # Remove any cold number that is already in Super Hot
+    # Remove any cold number that is already in Super Hot (Auto-Fill)
     safe_cold_pool = [n for n in raw_cold_nums if n not in super_hot_2]
-    
-    # Auto-Fill to get exact 2 Cold numbers
     super_cold_2 = safe_cold_pool[:2] if len(safe_cold_pool) >= 2 else safe_cold_pool
     
-    # Build Master Core 6 (Super Hot + Super Cold)
+    # Build Master Core 6 (Super Hot 2 + Super Cold 2)
     master_4_digits = super_hot_2 + super_cold_2
     mc_6_pairs = [f"{a}{b}" for a, b in itertools.combinations(master_4_digits, 2)]
     
     # Pattern Matrix 10
-    pm_hot5 = res_p['m1_hot_5']
+    pm_hot5 = res_p['m1_next']['m'] + res_p['m1_next']['s']
     pm_10_pairs = [f"{a}{b}" for a, b in itertools.combinations(pm_hot5, 2)]
     
-    # The Golden Cross (Super Main)
+    # The Golden Cross (Super Main Intersection)
     all_pairs = list(set(pm_10_pairs + mc_6_pairs))
     super_main_pairs = [p for p in all_pairs if p[0] in super_hot_2 or p[1] in super_hot_2]
     
-    # --- Generate V13 Logs ---
+    # --- Generate V13 Logs for Summary Tab ---
     summary_logs = []
     ts_p = res_p['test_size']
     actuals = res_p['actuals']
@@ -380,7 +409,51 @@ if st.session_state.get('run_v13'):
             
     summary_logs.reverse()
 
-    # --- Render Tabs (V12 FULL RESTORE) ---
+    # --- 📊 Helper Function for V12 FULL RESTORE Analytics ---
+    def render_v12_analytics(mode_eval, next_m, next_s, next_cm, next_cs, ts):
+        st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("##### 🔥 အပူဇုန် (Main Group)")
+            st.markdown(f"<div class='main-num-box'>{' '.join(next_m)}</div>", unsafe_allow_html=True)
+        with c2:
+            st.markdown("##### ⭐ အပူဇုန် (Sec Group)")
+            st.markdown(f"<div class='sec-num-box'>{' '.join(next_s)}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        st.markdown("#### 📊 အပူဇုန် Rank စွမ်းဆောင်ရည်")
+        h_t = ""
+        for r, hits in mode_eval['sorted_ranks']:
+            h_t += f"> Rank {r} : {hits} ပွဲ (Win Rate: {(hits/ts)*100:.1f}%)<br>"
+        st.markdown(f"<div class='yellow-status'>{h_t}</div>", unsafe_allow_html=True)
+        
+        with st.expander("📝 အပူဇုန် နောက်ဆုံး 10 ပွဲ မှတ်တမ်း"):
+            for log in mode_eval['hot_logs'][:10]:
+                st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
+        
+        st.divider()
+        
+        st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+        c3, c4 = st.columns(2)
+        with c3:
+            st.markdown("##### ❄️ အအေးဇုန် (Cold Main)")
+            st.markdown(f"<div class='main-num-box' style='border-color:#00E5FF; color:#00E5FF;'>{' '.join(next_cm)}</div>", unsafe_allow_html=True)
+        with c4:
+            st.markdown("##### ❄️ အအေးဇုန် (Cold Sec)")
+            st.markdown(f"<div class='sec-num-box' style='border-color:#00E5FF; color:#00E5FF;'>{' '.join(next_cs)}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        st.markdown("#### 📊 အအေးဇုန် Rank စွမ်းဆောင်ရည်")
+        c_t = ""
+        for r, hits in mode_eval['sorted_ranks_cold']:
+            c_t += f"> Rank {r} : {hits} ပွဲ (Win Rate: {(hits/ts)*100:.1f}%)<br>"
+        st.markdown(f"<div class='blue-status'>{c_t}</div>", unsafe_allow_html=True)
+        
+        with st.expander("📝 အအေးဇုန် နောက်ဆုံး 10 ပွဲ မှတ်တမ်း"):
+            for log in mode_eval['cold_logs'][:10]:
+                st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
+
+    # --- 📑 Render Tabs ---
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 Summary", "🌊 Pattern Matrix", "🚀 Deep Trend", "💎 Master Core"])
     
     with tab1:
@@ -433,29 +506,15 @@ if st.session_state.get('run_v13'):
             for log in summary_logs:
                 st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
 
-    def render_analytics(eval_data, test_size, next_m, next_s):
-        st.markdown(f"""
-        <div style='text-align:center; margin-bottom: 15px;'>
-            <div style='color:#FFD700; font-size:16px; font-weight:bold; margin-bottom:5px;'>လုံးဘိုင် ၂ လုံး</div>
-            <div class='main-num-box' style='padding:10px 25px;'>{next_m[0] if len(next_m)>0 else '-'}</div>
-            <div class='main-num-box' style='padding:10px 25px;'>{next_m[1] if len(next_m)>1 else '-'}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        h_t = ""
-        for i, (r, hits) in enumerate(eval_data['sorted_ranks']):
-            role = "MAIN" if i < 2 else "SEC"
-            h_t += f"> Rank {r} : {hits} ပွဲ (Win Rate: {(hits/test_size)*100:.1f}%) <-- [{role}]<br>"
-        st.markdown(f"<div class='yellow-status'>{h_t}</div>", unsafe_allow_html=True)
-
     with tab2:
-        st.markdown("### 🌊 Pattern Matrix Analytics (အကွက်အင်ဂျင်၏ တွက်ချက်မှုများ)")
-        render_analytics(res_p['m1'], res_p['test_size'], res_p['m1_next']['m'], res_p['m1_next']['s'])
+        st.markdown("### 🌊 Pattern Matrix Analytics")
+        render_v12_analytics(res_p['m1'], res_p['m1_next']['m'], res_p['m1_next']['s'], res_p['m1_next']['cm'], res_p['m1_next']['cs'], res_p['test_size'])
         
     with tab3:
-        st.markdown("### 🚀 Deep Trend Analytics (ရေစီးကြောင်းအနက်ရှိုင်း တွက်ချက်မှုများ)")
-        render_analytics(res_p['m2'], res_p['test_size'], res_p['m2_next']['m'], res_p['m2_next']['s'])
+        st.markdown("### 🚀 Deep Trend Analytics")
+        render_v12_analytics(res_p['m2'], res_p['m2_next']['m'], res_p['m2_next']['s'], res_p['m2_next']['cm'], res_p['m2_next']['cs'], res_p['test_size'])
         
     with tab4:
-        st.markdown("### 💎 Master Core Analytics (လုံးဘိုင်အင်ဂျင်၏ တွက်ချက်မှုများ)")
-        render_analytics(res_l['m3'], res_l['test_size'], res_l['m3_next_raw'][:2], res_l['m3_next_raw'][2:5])
+        st.markdown("### 💎 Master Core Analytics")
+        render_v12_analytics(res_l['m3'], res_l['m3_next']['m'], res_l['m3_next']['s'], res_l['m3_next']['cm'], res_l['m3_next']['cs'], res_l['test_size'])
 
