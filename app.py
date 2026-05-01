@@ -367,7 +367,7 @@ def render_mode_tab(eval_data, test_size, next_m, next_s):
     with st.expander(f"📊 မှတ်တမ်းအသေးစိတ်ကြည့်ရန် ({test_size} ပွဲ)"):
         for log in eval_data['hot_logs']: st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
 
-# --- 📱 Sidebar (Data Center V14.3) ---
+# --- 📱 Sidebar (Data Center V14.3 Fixed Parser) ---
 st.sidebar.title("Data Center 📥")
 uploaded_file = st.sidebar.file_uploader("Excel ဖိုင် တင်ရန်", type=["xlsx"])
 
@@ -380,13 +380,22 @@ if uploaded_file is not None:
         df.columns = df.columns.str.strip().str.lower()
         temp_timeline = []
         for _, row in df.iterrows():
-            if 'am1' in df.columns and pd.notna(row['am1']):
-                temp_timeline.append({'session': 'AM', 'draw': (int(float(row['am1'])), int(float(row['am2'])))})
-            if 'pm1' in df.columns and pd.notna(row['pm1']):
-                temp_timeline.append({'session': 'PM', 'draw': (int(float(row['pm1'])), int(float(row['pm2'])))})
+            if 'am1' in df.columns and 'am2' in df.columns:
+                if pd.notna(row['am1']) and pd.notna(row['am2']):
+                    try:
+                        temp_timeline.append({'session': 'AM', 'draw': (int(float(row['am1'])), int(float(row['am2'])))})
+                    except ValueError:
+                        pass # 'x', '-', စသော စာသားများပါဝင်လျှင် အလိုအလျောက် ကျော်သွားမည်
+            if 'pm1' in df.columns and 'pm2' in df.columns:
+                if pd.notna(row['pm1']) and pd.notna(row['pm2']):
+                    try:
+                        temp_timeline.append({'session': 'PM', 'draw': (int(float(row['pm1'])), int(float(row['pm2'])))})
+                    except ValueError:
+                        pass # ပိတ်ရက်များကို ကျော်သွားမည်
+                        
         if temp_timeline: 
             st.session_state.history = temp_timeline
-            st.sidebar.success(f"✅ Data ({len(temp_timeline)}) ပွဲ ဝင်ရောက်ပါပြီ။")
+            st.sidebar.success(f"✅ Data ({len(temp_timeline)}) ပွဲ ဝင်ရောက်ပါပြီ။ ('x' ကဲ့သို့သော စာသားများကို ကျော်သွားပါသည်)")
     except Exception as e: 
         st.sidebar.error(f"❌ Error: {e}")
 
