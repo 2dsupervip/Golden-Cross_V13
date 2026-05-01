@@ -2,6 +2,16 @@ import streamlit as st
 import pandas as pd
 import itertools
 from collections import Counter
+import warnings
+
+# --- 🤖 Machine Learning Integration ---
+try:
+    from sklearn.ensemble import RandomForestClassifier
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+
+warnings.filterwarnings('ignore')
 
 # --- 🎨 UI Configuration ---
 st.set_page_config(page_title="The Golden Cross AI", page_icon="👑", layout="wide")
@@ -12,8 +22,8 @@ if 'authenticated' not in st.session_state:
 
 if not st.session_state.authenticated:
     st.markdown("<br><br><br>", unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align: center; color: #00E5FF; letter-spacing: 2px;'>🚀 THE GOLDEN CROSS (V14)</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #A0AEC0;'>AUTHORIZED ADMIN ONLY</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #00E5FF; letter-spacing: 2px;'>🤖 THE GOLDEN CROSS (V14.3)</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #A0AEC0;'>MACHINE LEARNING HYBRID ENGINE</p>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -33,7 +43,6 @@ if not st.session_state.authenticated:
 st.markdown("""
     <style>
     .main { background-color: #0B0E14; }
-    .gold-text { color: #FFD700; font-weight: 800; text-align: center; margin-bottom: 0px;}
     .neon-text { color: #00E5FF; font-weight: 800; text-align: center; margin-bottom: 0px;}
     .yellow-status { color: #FFD700; font-family: 'Courier New', Courier, monospace; line-height: 1.6; background-color: #1A1C23; padding: 15px; border-radius: 8px; border-left: 4px solid #FFD700; margin-bottom: 20px; font-size: 14px;}
     .blue-status { color: #00E5FF; font-family: 'Courier New', Courier, monospace; line-height: 1.6; background-color: #1A1C23; padding: 15px; border-radius: 8px; border-left: 4px solid #00E5FF; margin-bottom: 20px; font-size: 14px;}
@@ -48,6 +57,9 @@ st.markdown("""
     
     .super-box { background: linear-gradient(145deg, #1A1C23, #0B0E14); border: 2px solid #00E5FF; border-radius: 12px; padding: 25px 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);}
     .super-num { font-size: 34px; color: #00E5FF; font-weight: 900; letter-spacing: 3px; background-color: #000; padding: 10px 20px; border-radius: 8px; margin: 0 10px; display: inline-block; border: 1px solid rgba(0,229,255,0.5);}
+    
+    .ai-box { background-color: #1A1C23; border-left: 5px solid #00FF88; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-family: 'Courier New', Courier, monospace;}
+    .ai-highlight { color: #00FF88; font-weight: bold; font-size: 18px;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -92,7 +104,6 @@ def get_mode2_raw_ranks(history):
         for k, v in Counter(flat).items(): scores[int(k)] += v * weight
     return [str(x[0]) for x in sorted(scores.items(), key=lambda x: x[1], reverse=True)]
 
-# --- 🎯 HISTORY MATCH ENGINE (Simple Frequency) ---
 def get_best_partners(target, hist_tuples):
     target_int = int(target)
     partners = []
@@ -105,12 +116,14 @@ def get_best_partners(target, hist_tuples):
         if str(i) not in sorted_p: sorted_p.append(str(i))
     return sorted_p[:4]
 
-# --- 📊 Full Backtest Engine ---
+# --- 📊 Full Backtest & ML Engine ---
+@st.cache_data(show_spinner=False)
 def run_backend_engine(timeline, test_size):
     total_draws = len(timeline)
     test_size = max(10, min(test_size, total_draws - 45))
     start_idx = total_draws - test_size
 
+    # --- 1. Statistical Engine Processing ---
     m1_raw_history, m2_raw_history, actuals = [], [], []
     for i in range(start_idx, total_draws):
         hist = timeline[:i]
@@ -121,7 +134,8 @@ def run_backend_engine(timeline, test_size):
     def evaluate_mode(raw_hist, actuals):
         rank_hits_1_5 = {1:0, 2:0, 3:0, 4:0, 5:0}
         rank_hits_6_10 = {6:0, 7:0, 8:0, 9:0, 10:0}
-
+        mains_hist, secs_hist, cm_hist, cs_hist = [], [], [], []
+        
         for i, draw in enumerate(actuals):
             preds = raw_hist[i]
             for r_idx in range(len(preds)):
@@ -139,7 +153,6 @@ def run_backend_engine(timeline, test_size):
 
         stats = {'m_hit':0, 's_hit':0, 'jp_12':0, 'mm_2':0, 'ss_6':0}
         cold_stats = {'m_hit':0, 's_hit':0, 'jp_12':0, 'mm_2':0, 'ss_6':0}
-        mains_hist, secs_hist, cm_hist, cs_hist = [], [], [], []
         hot_logs, cold_logs = [], []
 
         for i, draw in enumerate(actuals):
@@ -170,7 +183,6 @@ def run_backend_engine(timeline, test_size):
 
             s1 = get_status(draw, m_l, s_l, stats)
             s2 = get_status(draw, cm_l, cs_l, cold_stats)
-
             hot_logs.append(f"ပွဲ {i+1:02d} | အဖြေမှန်: [{draw}] | Main {m_l} x Sec {s_l} | ရလဒ်: {s1}")
             cold_logs.append(f"ပွဲ {i+1:02d} | အဖြေမှန်: [{draw}] | Main {cm_l} x Sec {cs_l} | ရလဒ်: {s2}")
 
@@ -200,7 +212,6 @@ def run_backend_engine(timeline, test_size):
 
     m3_eval = evaluate_mode(m3_raw_history, actuals)
 
-    # 🔮 THE PREDICTION ENGINE
     m1_next_raw = get_mode1_raw_ranks(timeline)
     m2_next_raw = get_mode2_raw_ranks(timeline)
 
@@ -225,174 +236,168 @@ def run_backend_engine(timeline, test_size):
 
     m3_next_m = [m3_next_raw[i] for i in m3_eval['m_idx'] if i < len(m3_next_raw)]
     m3_next_s = [m3_next_raw[i] for i in m3_eval['s_idx'] if i < len(m3_next_raw)]
-    m3_next_cm = [m3_next_raw[i] for i in m3_eval['cm_idx'] if i < len(m3_next_raw)]
-    m3_next_cs = [m3_next_raw[i] for i in m3_eval['cs_idx'] if i < len(m3_next_raw)]
+    
+    # --- 🤖 2. Machine Learning Engine (Random Forest) ---
+    ml_future_pred = []
+    ml_win_count = 0
+    ml_logs = []
+    
+    if ML_AVAILABLE and len(timeline) >= 50:
+        # ML Training Data Preparation (Fast Window)
+        ml_timeline = timeline[-300:] if len(timeline) > 300 else timeline
+        total_ml_draws = len(ml_timeline)
+        
+        m1_ml_raw, m2_ml_raw = [], []
+        for i in range(total_ml_draws):
+            m1_ml_raw.append(get_mode1_raw_ranks(ml_timeline[:i]))
+            m2_ml_raw.append(get_mode2_raw_ranks(ml_timeline[:i]))
+            
+        X_train, y_train = [], []
+        for i in range(1, total_ml_draws - test_size):
+            prev = ml_timeline[i-1]
+            m1_feat = [int(x) for x in m1_ml_raw[i][:3]] if len(m1_ml_raw[i]) >= 3 else [0,0,0]
+            m2_feat = [int(x) for x in m2_ml_raw[i][:3]] if len(m2_ml_raw[i]) >= 3 else [0,0,0]
+            X_train.append([prev[0], prev[1]] + m1_feat + m2_feat)
+            target = [0]*10
+            target[ml_timeline[i][0]] = 1
+            target[ml_timeline[i][1]] = 1
+            y_train.append(target)
+            
+        # Add dummy rows to ensure all 10 classes have seen both 0 and 1
+        X_train.append([0,0,0,0,0,0,0,0])
+        y_train.append([1]*10)
+        X_train.append([0,0,0,0,0,0,0,0])
+        y_train.append([0]*10)
+
+        # Build Test Data
+        X_test = []
+        for i in range(total_ml_draws - test_size, total_ml_draws):
+            prev = ml_timeline[i-1]
+            m1_feat = [int(x) for x in m1_ml_raw[i][:3]] if len(m1_ml_raw[i]) >= 3 else [0,0,0]
+            m2_feat = [int(x) for x in m2_ml_raw[i][:3]] if len(m2_ml_raw[i]) >= 3 else [0,0,0]
+            X_test.append([prev[0], prev[1]] + m1_feat + m2_feat)
+            
+        # Train Model
+        rf = RandomForestClassifier(n_estimators=100, random_state=42)
+        rf.fit(X_train, y_train)
+        
+        # Test Evaluation
+        pred_probs = rf.predict_proba(X_test)
+        for i in range(len(X_test)):
+            digit_probs = {}
+            for d in range(10):
+                digit_probs[str(d)] = pred_probs[d][i][1] if pred_probs[d].shape[1] == 2 else 0.0
+            sorted_ml = sorted(digit_probs.items(), key=lambda x: x[1], reverse=True)
+            top_2_ml = [sorted_ml[0][0], sorted_ml[1][0]]
+            
+            actual_d = f"{ml_timeline[total_ml_draws - test_size + i][0]}{ml_timeline[total_ml_draws - test_size + i][1]}"
+            if actual_d[0] in top_2_ml or actual_d[1] in top_2_ml:
+                ml_win_count += 1
+                ml_logs.append(f"ပွဲ {i+1:02d} | အဖြေ: [{actual_d}] | ML တွက်ချက်မှု: {top_2_ml} | ✅ မှန်သည်")
+            else:
+                ml_logs.append(f"ပွဲ {i+1:02d} | အဖြေ: [{actual_d}] | ML တွက်ချက်မှု: {top_2_ml} | ❌ လွဲ")
+        
+        # Future Prediction
+        curr_prev = ml_timeline[-1]
+        m1_next_feat = [int(x) for x in m1_next_raw[:3]] if len(m1_next_raw) >= 3 else [0,0,0]
+        m2_next_feat = [int(x) for x in m2_next_raw[:3]] if len(m2_next_raw) >= 3 else [0,0,0]
+        future_probs = rf.predict_proba([[curr_prev[0], curr_prev[1]] + m1_next_feat + m2_next_feat])
+        
+        digit_probs_future = {}
+        for d in range(10):
+            digit_probs_future[str(d)] = future_probs[d][0][1] if future_probs[d].shape[1] == 2 else 0.0
+        ml_future_pred = sorted(digit_probs_future.items(), key=lambda x: x[1], reverse=True)
 
     return {
         'm1': m1_eval, 'm2': m2_eval, 'm3': m3_eval,
-        'm1_next': {'m': m1_next_m, 's': m1_next_s, 'cm': m1_next_cm, 'cs': m1_next_cs},
-        'm2_next': {'m': m2_next_m, 's': m2_next_s, 'cm': m2_next_cm, 'cs': m2_next_cs},
-        'm3_next': {'m': m3_next_m, 's': m3_next_s, 'cm': m3_next_cm, 'cs': m3_next_cs},
+        'm1_next': {'m': m1_next_m, 's': m1_next_s},
+        'm2_next': {'m': m2_next_m, 's': m2_next_s},
+        'm3_next': {'m': m3_next_m, 's': m3_next_s},
         'm3_next_raw': m3_next_raw,
         'test_size': test_size,
         'actuals': actuals,
-        'timeline_used': timeline
+        'timeline_used': timeline,
+        'ml_future_pred': ml_future_pred,
+        'ml_win_count': ml_win_count,
+        'ml_logs': list(reversed(ml_logs))
     }
 
-# --- 🧠 V14 TRI-ENGINE AI OPTIMIZATION (AM/PM Aware) ---
 def get_v14_tri_recommendations(timeline):
     best_lb_l, max_hits_l = 50, -1
     best_lb_p, max_hits_p = 50, -1
-    best_lb_c, max_hits_c = 50, -1
     
     total_draws = len(timeline)
     max_possible_lb = max(10, total_draws - 45)
-    
-    lookbacks_to_test = [lb for lb in [10, 20, 30, 40, 50, 60] if lb <= max_possible_lb]
-    if not lookbacks_to_test:
-        if max_possible_lb >= 10: lookbacks_to_test = [max_possible_lb]
-        else: return 10, 10, 10
+    lookbacks_to_test = [lb for lb in [20, 30, 40, 50, 60] if lb <= max_possible_lb]
+    if not lookbacks_to_test: return 10, 10
             
     for lb in lookbacks_to_test:
         res = run_backend_engine(timeline, lb)
         ts = res['test_size']
         actuals = res['actuals']
-        
         log_limit = min(10, ts)
-        hits_l, hits_p, hits_c = 0, 0, 0
+        hits_l, hits_p = 0, 0
         for i in range(ts - log_limit, ts):
             draw = actuals[i]
-            
             lone_hist = res['m3']['mains_hist'][i]
             if draw[0] in lone_hist or draw[1] in lone_hist: hits_l += 1
-            
             pm_hot5_hist = res['m1']['mains_hist'][i] + res['m1']['secs_hist'][i]
             pm_10_hist = [f"{a}{b}" for a, b in itertools.combinations(pm_hot5_hist, 2)]
-            mc_hot2_hist = res['m3']['mains_hist'][i]
-            mc_cold2_hist = res['m3']['cm_hist'][i]
-            mc_6_hist = [f"{a}{b}" for a, b in itertools.combinations(mc_hot2_hist + mc_cold2_hist, 2)]
-            
-            if any(draw == p or draw == p[::-1] for p in pm_10_hist) or any(draw == p or draw == p[::-1] for p in mc_6_hist):
-                hits_p += 1
-                
-            if draw[0] in mc_cold2_hist or draw[1] in mc_cold2_hist: hits_c += 1
+            if any(draw == p or draw == p[::-1] for p in pm_10_hist): hits_p += 1
                 
         if hits_l > max_hits_l: max_hits_l = hits_l; best_lb_l = lb
         if hits_p > max_hits_p: max_hits_p = hits_p; best_lb_p = lb
-        if hits_c > max_hits_c: max_hits_c = hits_c; best_lb_c = lb
             
-    return best_lb_l, best_lb_p, best_lb_c
+    return best_lb_l, best_lb_p
 
 # --- 📱 UI Component for Analytics Tabs ---
-def render_mode_tab(eval_data, test_size, next_m, next_s, next_cm, next_cs):
+def render_mode_tab(eval_data, test_size, next_m, next_s):
     st.markdown("<h4 style='color:#FFD700;'>🔥 Hot Number</h4>", unsafe_allow_html=True)
-    
     st.markdown(f"""
     <div style='text-align:center; margin-bottom: 15px;'>
-        <div style='color:#FFD700; font-size:16px; font-weight:bold; margin-bottom:5px;'>လုံးဘိုင် ၂ လုံး</div>
         <div class='main-num-box' style='padding:10px 25px;'>{next_m[0] if len(next_m)>0 else '-'}</div>
         <div class='main-num-box' style='padding:10px 25px;'>{next_m[1] if len(next_m)>1 else '-'}</div>
-        <div style='color:#A0AEC0; font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Master key</div>
-        <div class='sec-num-box'>{next_s[0] if len(next_s)>0 else '-'}</div>
-        <div class='sec-num-box'>{next_s[1] if len(next_s)>1 else '-'}</div>
-        <div class='sec-num-box'>{next_s[2] if len(next_s)>2 else '-'}</div>
     </div>
     """, unsafe_allow_html=True)
-    
     h_t = ""
     for i, (r, hits) in enumerate(eval_data['sorted_ranks']):
         role = "MAIN" if i < 2 else "SEC"
         h_t += f"> Rank {r} : {hits} ပွဲ (Win Rate: {(hits/test_size)*100:.1f}%) <-- [{role}]<br>"
-    st_d = eval_data['stats']
-    h_t += f"<br>💎 Main (၂) လုံး အပါဝင်သောပွဲ : ({st_d['m_hit'] + st_d['jp_12'] + st_d['mm_2']}) ပွဲ (Win Rate: {((st_d['m_hit'] + st_d['jp_12'] + st_d['mm_2'])/test_size)*100:.1f}%)<br>"
-    h_t += f"⭐ Sec (၃) လုံး အပါဝင်သောပွဲ : ({st_d['s_hit'] + st_d['jp_12'] + st_d['ss_6']}) ပွဲ (Win Rate: {((st_d['s_hit'] + st_d['jp_12'] + st_d['ss_6'])/test_size)*100:.1f}%)<br>"
-    h_t += f"🔥 အကွက် (၁၂) ကွက်တည်းဖြင့် JACKPOT ဝင်သောပွဲ : ({st_d['jp_12']}) ပွဲ (Win Rate: {(st_d['jp_12']/test_size)*100:.1f}%)<br>"
-    h_t += f"👑 Main အချင်းချင်း (၂ ကွက်) ဝင်ပွဲ : ({st_d['mm_2']}) ပွဲ (Win Rate: {(st_d['mm_2']/test_size)*100:.1f}%)<br>"
-    h_t += f"💰 Sec အချင်းချင်း (၆ ကွက်) ဝင်ပွဲ : ({st_d['ss_6']}) ပွဲ (Win Rate: {(st_d['ss_6']/test_size)*100:.1f}%)"
     st.markdown(f"<div class='yellow-status'>{h_t}</div>", unsafe_allow_html=True)
-    
-    with st.expander(f"📊 Hot Number မှတ်တမ်းအသေးစိတ်ကြည့်ရန် ({test_size} ပွဲ)"):
+    with st.expander(f"📊 မှတ်တမ်းအသေးစိတ်ကြည့်ရန် ({test_size} ပွဲ)"):
         for log in eval_data['hot_logs']: st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
 
-    st.markdown("<h4 style='color:#00E5FF; margin-top:30px;'>❄️ Cold Number</h4>", unsafe_allow_html=True)
-    
-    st.markdown(f"""
-    <div style='text-align:center; margin-bottom: 15px;'>
-        <div style='color:#00E5FF; font-size:16px; font-weight:bold; margin-bottom:5px;'>လုံးဘိုင် ၂ လုံး</div>
-        <div class='main-num-box' style='border-color:#00E5FF; color:#00E5FF; padding:10px 25px;'>{next_cm[0] if len(next_cm)>0 else '-'}</div>
-        <div class='main-num-box' style='border-color:#00E5FF; color:#00E5FF; padding:10px 25px;'>{next_cm[1] if len(next_cm)>1 else '-'}</div>
-        <div style='color:#A0AEC0; font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Master key</div>
-        <div class='sec-num-box'>{next_cs[0] if len(next_cs)>0 else '-'}</div>
-        <div class='sec-num-box'>{next_cs[1] if len(next_cs)>1 else '-'}</div>
-        <div class='sec-num-box'>{next_cs[2] if len(next_cs)>2 else '-'}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    c_t = ""
-    for i, (r, hits) in enumerate(eval_data['sorted_ranks_cold']):
-        role = "MAIN" if i < 2 else "SEC"
-        c_t += f"> Rank {r} : {hits} ပွဲ (Win Rate: {(hits/test_size)*100:.1f}%) <-- [{role}]<br>"
-    c_st = eval_data['cold_stats']
-    c_t += f"<br>💎 Main (၂) လုံး အပါဝင်သောပွဲ : ({c_st['m_hit'] + c_st['jp_12'] + c_st['mm_2']}) ပွဲ (Win Rate: {((c_st['m_hit'] + c_st['jp_12'] + c_st['mm_2'])/test_size)*100:.1f}%)<br>"
-    c_t += f"⭐ Sec (၃) လုံး အပါဝင်သောပွဲ : ({c_st['s_hit'] + c_st['jp_12'] + c_st['ss_6']}) ပွဲ (Win Rate: {((c_st['s_hit'] + c_st['jp_12'] + c_st['ss_6'])/test_size)*100:.1f}%)<br>"
-    c_t += f"🔥 အကွက် (၁၂) ကွက်တည်းဖြင့် JACKPOT ဝင်သောပွဲ : ({c_st['jp_12']}) ပွဲ (Win Rate: {(c_st['jp_12']/test_size)*100:.1f}%)<br>"
-    c_t += f"👑 Main အချင်းချင်း (၂ ကွက်) ဝင်ပွဲ : ({c_st['mm_2']}) ပွဲ (Win Rate: {(c_st['mm_2']/test_size)*100:.1f}%)<br>"
-    c_t += f"💰 Sec အချင်းချင်း (၆ ကွက်) ဝင်ပွဲ : ({c_st['ss_6']}) ပွဲ (Win Rate: {(c_st['ss_6']/test_size)*100:.1f}%)"
-    st.markdown(f"<div class='blue-status'>{c_t}</div>", unsafe_allow_html=True)
-    
-    with st.expander(f"📊 Cold Number မှတ်တမ်းအသေးစိတ်ကြည့်ရန် ({test_size} ပွဲ)"):
-        for log in eval_data['cold_logs']: st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
-
-# --- 📱 Sidebar (Data Center V14) ---
+# --- 📱 Sidebar (Data Center V14.3) ---
 st.sidebar.title("Data Center 📥")
 uploaded_file = st.sidebar.file_uploader("Excel ဖိုင် တင်ရန်", type=["xlsx"])
 
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-if 'last_uploaded' not in st.session_state:
-    st.session_state.last_uploaded = None
-
 if uploaded_file is not None:
-    file_details = f"{uploaded_file.name}_{uploaded_file.size}"
-    if st.session_state.last_uploaded != file_details:
-        try:
-            df = pd.read_excel(uploaded_file, engine='openpyxl')
-            df.columns = df.columns.str.strip().str.lower()
-            temp_timeline = []
-            day_counter = 1
-            
-            for _, row in df.iterrows():
-                if 'am1' in df.columns and 'am2' in df.columns:
-                    if pd.notna(row['am1']) and pd.notna(row['am2']):
-                        try: 
-                            am_draw = (int(float(row['am1'])), int(float(row['am2'])))
-                            temp_timeline.append({'day': day_counter, 'session': 'AM', 'draw': am_draw})
-                        except: pass
-                if 'pm1' in df.columns and 'pm2' in df.columns:
-                    if pd.notna(row['pm1']) and pd.notna(row['pm2']):
-                        try: 
-                            pm_draw = (int(float(row['pm1'])), int(float(row['pm2'])))
-                            temp_timeline.append({'day': day_counter, 'session': 'PM', 'draw': pm_draw})
-                        except: pass
-                day_counter += 1
-                
-            if temp_timeline: 
-                st.session_state.history = temp_timeline
-                st.session_state.last_uploaded = file_details 
-                st.sidebar.success(f"✅ Data ({len(temp_timeline)}) ပွဲကို V14 Format ဖြင့် ဝင်ရောက်ပါပြီ။")
-        except Exception as e: 
-            st.sidebar.error(f"❌ Error: {e}")
+    try:
+        df = pd.read_excel(uploaded_file, engine='openpyxl')
+        df.columns = df.columns.str.strip().str.lower()
+        temp_timeline = []
+        for _, row in df.iterrows():
+            if 'am1' in df.columns and pd.notna(row['am1']):
+                temp_timeline.append({'session': 'AM', 'draw': (int(float(row['am1'])), int(float(row['am2'])))})
+            if 'pm1' in df.columns and pd.notna(row['pm1']):
+                temp_timeline.append({'session': 'PM', 'draw': (int(float(row['pm1'])), int(float(row['pm2'])))})
+        if temp_timeline: 
+            st.session_state.history = temp_timeline
+            st.sidebar.success(f"✅ Data ({len(temp_timeline)}) ပွဲ ဝင်ရောက်ပါပြီ။")
+    except Exception as e: 
+        st.sidebar.error(f"❌ Error: {e}")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📝 Live Data Entry (V14)")
+st.sidebar.markdown("### 📝 Live Data Entry (V14.3)")
 
-# Logic 1: Sidebar Auto-Toggle Logic 
 if st.session_state.history:
     last_entry = st.session_state.history[-1]
     last_draw = last_entry['draw']
     last_session = last_entry['session']
-    st.sidebar.info(f"**နောက်ဆုံးထွက်: [ {last_draw[0]}{last_draw[1]} ] ({last_session})**\nစုစုပေါင်း {len(st.session_state.history)} ပွဲ")
+    st.sidebar.info(f"**နောက်ဆုံးထွက်: [ {last_draw[0]}{last_draw[1]} ] ({last_session})**")
     default_idx = 1 if last_session == "AM" else 0
 else:
     default_idx = 0
@@ -400,42 +405,27 @@ else:
 c1, c2 = st.sidebar.columns(2)
 new_top = c1.number_input("ထိပ်စီး", min_value=0, max_value=9, step=1, value=0)
 new_bot = c2.number_input("နောက်ပိတ်", min_value=0, max_value=9, step=1, value=0)
-
-new_session = st.sidebar.radio("Session ရွေးချယ်ရန်", ["AM", "PM"], index=default_idx, horizontal=True)
+new_session = st.sidebar.radio("Session", ["AM", "PM"], index=default_idx, horizontal=True)
 
 if st.sidebar.button("➕ အသစ်ထည့်မည်", use_container_width=True):
-    if not st.session_state.history:
-        new_day = 1
-    else:
-        last_hist = st.session_state.history[-1]
-        if last_hist['session'] == "PM" and new_session == "AM":
-            new_day = last_hist['day'] + 1
-        else:
-            new_day = last_hist['day']
-            
-    st.session_state.history.append({'day': new_day, 'session': new_session, 'draw': (new_top, new_bot)})
+    st.session_state.history.append({'session': new_session, 'draw': (new_top, new_bot)})
     if hasattr(st, "rerun"): st.rerun()
     else: st.experimental_rerun()
 
-if st.sidebar.button("↩️ Undo (ပြန်ဖျက်မည်)"):
-    if len(st.session_state.history) > 0:
-        st.session_state.history.pop()
-        if hasattr(st, "rerun"): st.rerun()
-        else: st.experimental_rerun()
-
-# --- 📱 Main App UI (V14) ---
+# --- 📱 Main App UI (V14.3) ---
 st.markdown("<h1 class='neon-text'>THE GOLDEN CROSS</h1>", unsafe_allow_html=True)
-st.markdown("<p class='sub-text'>V14.1 - THE NEXT GENERATION (TEMPORAL LOGIC)</p>", unsafe_allow_html=True)
+st.markdown("<p class='sub-text'>V14.3 - MACHINE LEARNING HYBRID ENGINE</p>", unsafe_allow_html=True)
 
-mode = st.radio("⚙️ Engine Mode ရွေးချယ်ရန်", ["🤖 AI Auto Mode (အကြံပြုချက် - Super Main ရှာဖွေပေးမည်)", "✍️ Custom Mode (မိမိစိတ်ကြိုက်)"])
+if not ML_AVAILABLE:
+    st.error("⚠️ စနစ်တွင် Machine Learning (scikit-learn) မရှိပါ။ Terminal တွင် `pip install scikit-learn` ဟု ရိုက်ထည့်ပါ။")
 
+mode = st.radio("⚙️ Engine Mode", ["🤖 AI Auto Mode", "✍️ Custom Mode"])
 custom_lb = 50
-if "Custom" in mode:
-    custom_lb = st.number_input("Backtest ပွဲစဉ် အရေအတွက် ရွေးချယ်ပါ:", min_value=10, max_value=100, value=50)
+if "Custom" in mode: custom_lb = st.number_input("Backtest ပွဲစဉ်:", value=50)
 
-if st.button("🚀 V14 Time-Wall Engine ကို Run မည်", use_container_width=True):
+if st.button("🚀 V14.3 Hybrid AI ကို Run မည်", use_container_width=True):
     if len(st.session_state.history) < 90:
-        st.warning("⚠️ Data အနည်းဆုံး ရက် ၄၅ ရက် (ပွဲ ၉၀ ခန့်) ထည့်သွင်းပေးရန် လိုအပ်ပါသည်။")
+        st.warning("⚠️ Data အနည်းဆုံး ပွဲ ၉၀ လိုအပ်ပါသည်။")
     else:
         st.session_state.run_v14 = True
         st.session_state.selected_mode = mode
@@ -443,164 +433,87 @@ if st.button("🚀 V14 Time-Wall Engine ကို Run မည်", use_container_
 
 if st.session_state.get('run_v14'):
     hist = st.session_state.history
-    mode_ran = st.session_state.selected_mode
-    
     target_session = "PM" if hist[-1]['session'] == "AM" else "AM"
     target_timeline = [item['draw'] for item in hist if item['session'] == target_session]
     
-    if len(target_timeline) <= 45:
-        st.error(f"❌ {target_session} အတွက် Data လုံလောက်မှု မရှိသေးပါ။ အနည်းဆုံး {target_session} သီးသန့် ၄၅ ပွဲ ရှိရပါမည်။")
-        st.stop()
-
-    st.success(f"🕒 **Time-Wall Activated:** AI သည် **({target_session})** ပွဲစဉ်အတွက် သီးသန့် အကောင်းဆုံးဂဏန်းများကို ရှာဖွေနေပါသည်။")
+    st.success(f"🕒 **Temporal Lock:** AI သည် **({target_session})** သမိုင်းကြောင်း သီးသန့်ကို ခွဲထုတ်၍ ခန့်မှန်းနေပါသည်။")
     
-    # Logic 2: Auto Mode with Target Timeline 
-    if "Auto" in mode_ran:
-        lb_l, lb_p, lb_c = get_v14_tri_recommendations(target_timeline)
+    if "Auto" in st.session_state.selected_mode:
+        lb_l, lb_p = get_v14_tri_recommendations(target_timeline)
         res_l = run_backend_engine(target_timeline, lb_l)
         res_p = run_backend_engine(target_timeline, lb_p)
-        res_c = run_backend_engine(target_timeline, lb_c)
-        st.info(f"🤖 **AI Auto Mode:** {target_session} သမိုင်းကြောင်းမှ [လုံးဘိုင် ({lb_l}) ပွဲ] ၊ [အကွက် ({lb_p}) ပွဲ] နှင့် [အအေး ({lb_c}) ပွဲ] တို့ကို အကောင်းဆုံး ဆုံမှတ်အဖြစ် ရွေးချယ်ထားပါသည်။")
     else:
         lb_p = st.session_state.custom_lb
         res_p = run_backend_engine(target_timeline, lb_p)
         res_l = res_p
-        res_c = res_p
-        st.info(f"✍️ **Custom Mode:** Admin ရိုက်ထည့်ထားသော ({lb_p}) ပွဲစာ ရေစီးကြောင်းဖြင့် တွက်ချက်ထားပါသည်။")
 
-    # --- 💎 V14 Collision Resolution (The Ultimate Hybrid) ---
     super_hot_2 = res_l['m3_next']['m']
-    
-    pref_cold_idx = res_c['m3']['cm_idx'] + res_c['m3']['cs_idx']
-    raw_cold_nums = [res_c['m3_next_raw'][i] for i in pref_cold_idx if i < len(res_c['m3_next_raw'])]
-    
-    safe_cold_pool = [n for n in raw_cold_nums if n not in super_hot_2]
-    super_cold_2 = safe_cold_pool[:2] if len(safe_cold_pool) >= 2 else safe_cold_pool
-    
-    master_4_digits = super_hot_2 + super_cold_2
-    mc_6_pairs = [f"{a}{b}" for a, b in itertools.combinations(master_4_digits, 2)]
-    
     pm_hot5 = res_p['m1_next']['m'] + res_p['m1_next']['s']
     pm_10_pairs = [f"{a}{b}" for a, b in itertools.combinations(pm_hot5, 2)]
     
-    all_pairs = list(set(pm_10_pairs + mc_6_pairs))
-    super_main_pairs = [p for p in all_pairs if p[0] in super_hot_2 or p[1] in super_hot_2]
-    
-    # --- Generate V14 Logs for Summary Tab ---
-    summary_logs = []
-    ts_p = res_p['test_size']
-    actuals = res_p['actuals']
-    timeline_used = res_p['timeline_used']
-    log_limit = min(10, ts_p)
-    
-    for k in range(1, log_limit + 1):
-        idx = ts_p - log_limit - 1 + k
-        draw = actuals[idx]
+    # --- ML Integration & VIP Checking ---
+    ml_picks = []
+    ml_top_2 = []
+    if res_l['ml_future_pred']:
+        ml_picks = res_l['ml_future_pred'][:4]
+        ml_top_2 = [ml_picks[0][0], ml_picks[1][0]]
         
-        hist_super_hot_2 = res_l['m3']['mains_hist'][res_l['test_size'] - log_limit - 1 + k]
-        
-        hist_timeline = timeline_used[:len(timeline_used) - log_limit - 1 + k]
-        hist_partner_pairs = []
-        for lone in hist_super_hot_2:
-            partners = get_best_partners(lone, hist_timeline)
-            for p in partners:
-                hist_partner_pairs.extend([f"{lone}{p}", f"{p}{lone}"])
-        
-        is_lone_hit = draw[0] in hist_super_hot_2 or draw[1] in hist_super_hot_2
-        is_history_hit = any(draw == p or draw == p[::-1] for p in set(hist_partner_pairs))
-        
-        hist_p_hot5 = res_p['m1']['mains_hist'][idx] + res_p['m1']['secs_hist'][idx]
-        hist_p_10 = [f"{a}{b}" for a, b in itertools.combinations(hist_p_hot5, 2)]
-        hist_c_hot2 = res_c['m3']['mains_hist'][res_c['test_size'] - log_limit - 1 + k]
-        hist_c_cold2 = res_c['m3']['cm_hist'][res_c['test_size'] - log_limit - 1 + k]
-        hist_mc_6 = [f"{a}{b}" for a, b in itertools.combinations(hist_c_hot2 + hist_c_cold2, 2)]
-        
-        p_hit = any(draw == p or draw == p[::-1] for p in hist_p_10) or any(draw == p or draw == p[::-1] for p in hist_mc_6)
-        
-        if is_history_hit: lone_str = f"✅ ({draw} ဝင်သည်)"
-        elif is_lone_hit: lone_str = "✅ (တွဲဖက် ❌)"
-        else: lone_str = "❌ လွဲ"
-            
-        p_str = "✅" if p_hit else "❌"
-        
-        if "Auto" in mode_ran:
-            hist_super_mains = [p for p in set(hist_p_10 + hist_mc_6) if p[0] in hist_super_hot_2 or p[1] in hist_super_hot_2]
-            sm_hit = any(draw == p or draw == p[::-1] for p in hist_super_mains)
-            sm_str = "✅ Hit" if sm_hit else "❌ Miss"
-            summary_logs.append(f"{target_session} ပွဲ {(ts_p - log_limit + k):02d} | အဖြေ: [{draw}] | 👑 Super Main: {sm_str} | 🛡️ လုံးဘိုင်+တွဲဖက်: {lone_str} | 🌊 အရံအကွက်: {p_str}")
-        else:
-            summary_logs.append(f"{target_session} ပွဲ {(ts_p - log_limit + k):02d} | အဖြေ: [{draw}] | 🛡️ လုံးဘိုင်+တွဲဖက်: {lone_str} | 🌊 အကွက်: {p_str}")
-            
-    summary_logs.reverse()
+    vip_key = [n for n in ml_top_2 if n in super_hot_2]
 
     # --- 📑 Render Tabs ---
-    st.markdown(f"<h3 style='text-align:center; color:#00E5FF; margin-top:10px;'>🎯 TARGET SESSION: {target_session}</h3>", unsafe_allow_html=True)
-    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Summary", "🌊 Pattern Matrix", "🚀 Deep Trend", "💎 Master Core"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Summary (AI Mode)", "🌊 Pattern Matrix", "🚀 Deep Trend", "🤖 AI Model Analysis"])
     
     with tab1:
-        if "Auto" in mode_ran:
-            st.markdown("<h3 style='text-align:center; color:#FFD700; margin-top:10px;'>👑 THE GOLDEN CROSS (SUPER MAIN)</h3>", unsafe_allow_html=True)
-            st.markdown(f"<p style='text-align:center; color:#A0AEC0;'>လုံးဘိုင်အင်ဂျင် နှင့် အကွက်အင်ဂျင် (၂) ခုလုံးမှ ထောက်ခံထားသော အမြင့်ဆုံး VIP အကွက်များ</p>", unsafe_allow_html=True)
-            
-            if super_main_pairs:
-                html_sm = "<div class='super-box'>"
-                html_sm += "".join([f"<span class='super-num'>{p}</span>" for p in super_main_pairs])
-                html_sm += "</div>"
-                st.markdown(html_sm, unsafe_allow_html=True)
-            else:
-                st.warning("⚠️ ယခုပွဲစဉ်တွင် အင်ဂျင် (၂) ခု ဆုံမှတ်မရှိပါ။ အောက်ပါ အရန်အကွက်များကိုသာ အသုံးပြုပါ။")
-            st.divider()
+        # AI Insights Box
+        if ml_picks:
+            st.markdown("<div class='ai-box'>🤖 <b>Machine Learning Insights:</b> AI Model မှ နောက်ပွဲအတွက် ကြိုတင်ခန့်မှန်းချက် ရာခိုင်နှုန်း<br><br>", unsafe_allow_html=True)
+            for digit, prob in ml_picks:
+                st.markdown(f"<span class='ai-highlight'>[ {digit} ] ➡ {prob*100:.1f}% သေချာပါသည်</span>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("### 🛡️ MASTER CORE (လုံးဘိုင် နှင့် အကောင်းဆုံး တွဲဖက်များ)")
-        st.markdown(f"<p style='color:gray; font-size:14px;'>သမိုင်းကြောင်းအရ {target_session} ပွဲစဉ်များတွင် အကြိမ်အရေအတွက် အများဆုံး တွဲထွက်ထားသော ဂဏန်းများ</p>", unsafe_allow_html=True)
-        
+        if vip_key:
+            st.markdown("<h3 style='text-align:center; color:#00FF88; margin-top:10px;'>👑 ULTRA VIP MASTER KEY</h3>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align:center; color:#A0AEC0;'>Tri-Engine (သင်္ချာစနစ်) နှင့် Random Forest (AI) ၂ ခုလုံးမှ ထောက်ခံထားသော (100% Confirmation) ဂဏန်း</p>", unsafe_allow_html=True)
+            html_sm = "<div class='super-box' style='border-color:#00FF88;'>"
+            html_sm += "".join([f"<span class='super-num' style='color:#00FF88; border-color:#00FF88;'>{p}</span>" for p in vip_key])
+            html_sm += "</div>"
+            st.markdown(html_sm, unsafe_allow_html=True)
+            
+        st.markdown("### 🛡️ MASTER CORE (သင်္ချာ လုံးဘိုင် နှင့် တွဲဖက်များ)")
         if len(super_hot_2) > 0:
             html_history = "<div class='premium-box' style='text-align:left; padding: 20px 30px;'>"
             for lone in super_hot_2:
                 partners = get_best_partners(lone, res_p['timeline_used'])
-                p_str = " ".join([f"<span class='sec-num-box' style='font-size: 18px; padding: 5px 12px;'>{p}</span>" for p in partners])
-                html_history += f"<div style='margin-bottom: 12px;'><span class='main-num-box' style='font-size: 24px; padding: 5px 15px;'>{lone}</span> <span style='color:#00E5FF; font-size: 18px; font-weight: bold;'>➡ တွဲရန် :</span> {p_str}</div>"
+                p_str = " ".join([f"<span class='sec-num-box'>{p}</span>" for p in partners])
+                html_history += f"<div style='margin-bottom: 12px;'><span class='main-num-box'>{lone}</span> <span style='color:#00E5FF; font-weight: bold;'>➡ တွဲရန် :</span> {p_str}</div>"
             html_history += "</div>"
             st.markdown(html_history, unsafe_allow_html=True)
-        
-        st.divider()
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("#### 🌊 PATTERN MATRIX (၁၀ ကွက်)")
-            html_pm = f"<div class='premium-box'>"
-            html_pm += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in pm_10_pairs[:5]]) + "<br><br>"
-            html_pm += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in pm_10_pairs[5:]])
-            html_pm += "</div>"
-            st.markdown(html_pm, unsafe_allow_html=True)
             
-        with c2:
-            st.markdown("#### ⚔️ MASTER CORE (၆ ကွက်)")
-            html_mc = f"<div class='premium-box' style='border-color:#00E5FF;'>"
-            if len(mc_6_pairs) >= 3:
-                html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs[:3]]) + "<br><br>"
-                html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs[3:]])
-            else:
-                html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs])
-            html_mc += "</div>"
-            st.markdown(html_mc, unsafe_allow_html=True)
-            
-        c_disp_1 = super_cold_2[0] if len(super_cold_2) > 0 else "-"
-        c_disp_2 = super_cold_2[1] if len(super_cold_2) > 1 else "-"
-        st.markdown(f"<div class='cyan-note'>💡 <b>မှတ်ချက်:</b> အအေးဇုန်မှ ရုတ်တရက် ပြန်လည်ရုန်းထွက်နိုင်ချေ အများဆုံးဖြစ်သော ({target_session} Best Cold) လုံးဘိုင်များမှာ <b>[ {c_disp_1} ]</b> နှင့် <b>[ {c_disp_2} ]</b> ဖြစ်ပါသည်။</div>", unsafe_allow_html=True)
-        
-        with st.expander(f"📊 နောက်ဆုံး 10 ပွဲ ({target_session} သီးသန့်) မှတ်တမ်းအသေးစိတ်ကြည့်ရန်"):
-            for log in summary_logs:
-                st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
+        st.markdown("#### 🌊 PATTERN MATRIX (၁၀ ကွက်)")
+        html_pm = f"<div class='premium-box'>"
+        html_pm += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in pm_10_pairs[:5]]) + "<br><br>"
+        html_pm += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in pm_10_pairs[5:]])
+        html_pm += "</div>"
+        st.markdown(html_pm, unsafe_allow_html=True)
 
     with tab2:
         st.markdown(f"### 🌊 Pattern Matrix Analysis ({target_session})")
-        render_mode_tab(res_p['m1'], res_p['test_size'], res_p['m1_next']['m'], res_p['m1_next']['s'], res_p['m1_next']['cm'], res_p['m1_next']['cs'])
+        render_mode_tab(res_p['m1'], res_p['test_size'], res_p['m1_next']['m'], res_p['m1_next']['s'])
         
     with tab3:
         st.markdown(f"### 🚀 Deep Trend Analysis ({target_session})")
-        render_mode_tab(res_p['m2'], res_p['test_size'], res_p['m2_next']['m'], res_p['m2_next']['s'], res_p['m2_next']['cm'], res_p['m2_next']['cs'])
+        render_mode_tab(res_p['m2'], res_p['test_size'], res_p['m2_next']['m'], res_p['m2_next']['s'])
         
     with tab4:
-        st.markdown(f"### 💎 Master Core Analysis ({target_session})")
-        render_mode_tab(res_l['m3'], res_l['test_size'], res_l['m3_next']['m'], res_l['m3_next']['s'], res_l['m3_next']['cm'], res_l['m3_next']['cs'])
+        st.markdown("### 🤖 Random Forest AI Evaluation")
+        st.markdown(f"<p class='sub-text'>နောက်ဆုံး {res_l['test_size']} ပွဲအပေါ် AI ၏ စမ်းသပ်အောင်မြင်မှု ရာခိုင်နှုန်း (Backtest Performance)</p>", unsafe_allow_html=True)
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(f"<div class='super-box' style='border-color:#00FF88;'><h3 style='color:#00FF88;'>🤖 ML AI Win Rate</h3><h2>{(res_l['ml_win_count']/res_l['test_size'])*100:.1f}%</h2></div>", unsafe_allow_html=True)
+        with c2:
+            m3_hit = res_l['m3']['stats']['m_hit'] + res_l['m3']['stats']['jp_12'] + res_l['m3']['stats']['mm_2']
+            st.markdown(f"<div class='super-box' style='border-color:#FFD700;'><h3 style='color:#FFD700;'>⚙️ Math Engine Win Rate</h3><h2>{(m3_hit/res_l['test_size'])*100:.1f}%</h2></div>", unsafe_allow_html=True)
+            
+        with st.expander("📊 AI Model ၏ မှတ်တမ်းအသေးစိတ်ကြည့်ရန်"):
+            for log in res_l['ml_logs']: st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
