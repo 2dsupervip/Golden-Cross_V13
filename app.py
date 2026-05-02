@@ -22,8 +22,8 @@ if 'authenticated' not in st.session_state:
 
 if not st.session_state.authenticated:
     st.markdown("<br><br><br>", unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align: center; color: #00E5FF; letter-spacing: 2px;'>🤖 THE GOLDEN CROSS (V14.5)</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #A0AEC0;'>ULTIMATE LEGEND HYBRID ENGINE</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #00E5FF; letter-spacing: 2px;'>🤖 THE GOLDEN CROSS (V14.6)</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #A0AEC0;'>ULTIMATE BUG-FREE EDITION</p>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -397,34 +397,40 @@ def render_mode_tab(eval_data, test_size, next_m, next_s, next_cm, next_cs):
     with st.expander(f"📊 Cold Number မှတ်တမ်းအသေးစိတ်ကြည့်ရန် ({test_size} ပွဲ)"):
         for log in eval_data['cold_logs']: st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
 
-# --- 📱 Sidebar (Data Center Fixed Live Entry) ---
+# --- 📱 Sidebar (Data Center: V14.6 Fix Data Overwrite Bug) ---
 st.sidebar.title("Data Center 📥")
 uploaded_file = st.sidebar.file_uploader("Excel ဖိုင် တင်ရန်", type=["xlsx"])
 
-if 'history' not in st.session_state: st.session_state.history = []
+if 'history' not in st.session_state: 
+    st.session_state.history = []
+if 'last_uploaded' not in st.session_state:
+    st.session_state.last_uploaded = None
 
 if uploaded_file is not None:
-    try:
-        df = pd.read_excel(uploaded_file, engine='openpyxl')
-        df.columns = df.columns.str.strip().str.lower()
-        temp_timeline = []
-        for _, row in df.iterrows():
-            if 'am1' in df.columns and 'am2' in df.columns:
-                if pd.notna(row['am1']) and pd.notna(row['am2']):
-                    try: temp_timeline.append({'session': 'AM', 'draw': (int(float(row['am1'])), int(float(row['am2'])))})
-                    except ValueError: pass 
-            if 'pm1' in df.columns and 'pm2' in df.columns:
-                if pd.notna(row['pm1']) and pd.notna(row['pm2']):
-                    try: temp_timeline.append({'session': 'PM', 'draw': (int(float(row['pm1'])), int(float(row['pm2'])))})
-                    except ValueError: pass 
-                        
-        if temp_timeline: 
-            st.session_state.history = temp_timeline
-            st.sidebar.success(f"✅ Data ({len(temp_timeline)}) ပွဲ ဝင်ရောက်ပါပြီ။")
-    except Exception as e: st.sidebar.error(f"❌ Error: {e}")
+    file_details = f"{uploaded_file.name}_{uploaded_file.size}"
+    if st.session_state.last_uploaded != file_details:
+        try:
+            df = pd.read_excel(uploaded_file, engine='openpyxl')
+            df.columns = df.columns.str.strip().str.lower()
+            temp_timeline = []
+            for _, row in df.iterrows():
+                if 'am1' in df.columns and 'am2' in df.columns:
+                    if pd.notna(row['am1']) and pd.notna(row['am2']):
+                        try: temp_timeline.append({'session': 'AM', 'draw': (int(float(row['am1'])), int(float(row['am2'])))})
+                        except ValueError: pass 
+                if 'pm1' in df.columns and 'pm2' in df.columns:
+                    if pd.notna(row['pm1']) and pd.notna(row['pm2']):
+                        try: temp_timeline.append({'session': 'PM', 'draw': (int(float(row['pm1'])), int(float(row['pm2'])))})
+                        except ValueError: pass 
+                            
+            if temp_timeline: 
+                st.session_state.history = temp_timeline
+                st.session_state.last_uploaded = file_details # Save Memory so it doesn't read again
+                st.sidebar.success(f"✅ Data ({len(temp_timeline)}) ပွဲ ဝင်ရောက်ပါပြီ။")
+        except Exception as e: st.sidebar.error(f"❌ Error: {e}")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📝 Live Data Entry (V14.5)")
+st.sidebar.markdown("### 📝 Live Data Entry (V14.6)")
 
 if st.session_state.history:
     last_entry = st.session_state.history[-1]
@@ -435,7 +441,7 @@ if st.session_state.history:
 else:
     default_idx = 0
 
-with st.sidebar.form("live_entry_form"):
+with st.sidebar.form("live_entry_form", clear_on_submit=True):
     c1, c2 = st.columns(2)
     new_top = c1.number_input("ထိပ်စီး", min_value=0, max_value=9, step=1, value=0)
     new_bot = c2.number_input("နောက်ပိတ်", min_value=0, max_value=9, step=1, value=0)
@@ -452,9 +458,9 @@ if st.sidebar.button("↩️ Undo (ပြန်ဖျက်မည်)"):
         if hasattr(st, "rerun"): st.rerun()
         else: st.experimental_rerun()
 
-# --- 📱 Main App UI (V14.5) ---
+# --- 📱 Main App UI (V14.6) ---
 st.markdown("<h1 class='neon-text'>THE GOLDEN CROSS</h1>", unsafe_allow_html=True)
-st.markdown("<p class='sub-text'>V14.5 - THE ULTIMATE LEGEND HYBRID ENGINE</p>", unsafe_allow_html=True)
+st.markdown("<p class='sub-text'>V14.6 - THE ULTIMATE BUG-FREE EDITION</p>", unsafe_allow_html=True)
 
 if not ML_AVAILABLE: st.error("⚠️ စနစ်တွင် Machine Learning (scikit-learn) မရှိပါ။ `requirements.txt` တွင် ထည့်ထားရန် သေချာပါစေ။")
 
@@ -462,7 +468,7 @@ mode = st.radio("⚙️ Engine Mode", ["🤖 AI Auto Mode", "✍️ Custom Mode"
 custom_lb = 50
 if "Custom" in mode: custom_lb = st.number_input("Backtest ပွဲစဉ်:", value=50)
 
-if st.button("🚀 V14.5 Ultimate Engine ကို Run မည်", use_container_width=True):
+if st.button("🚀 V14.6 Ultimate Engine ကို Run မည်", use_container_width=True):
     if len(st.session_state.history) < 90: st.warning("⚠️ Data အနည်းဆုံး ပွဲ ၉၀ လိုအပ်ပါသည်။")
     else:
         st.session_state.run_v14 = True
@@ -540,7 +546,7 @@ if st.session_state.get('run_v14'):
     summary_logs.reverse()
 
     # --- 📑 Render Tabs ---
-    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Summary (AI Mode)", "🌊 Pattern Matrix", "🚀 Deep Trend", "💎 Master Core (AI vs Math)"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Summary", "🌊 Pattern Matrix", "🚀 Deep Trend", "💎 Master Core (AI vs Math)"])
     
     with tab1:
         if ml_picks:
@@ -557,17 +563,15 @@ if st.session_state.get('run_v14'):
             html_sm += "</div>"
             st.markdown(html_sm, unsafe_allow_html=True)
             
-        # --- 👑 MASTER CORE UI UPGRADE ---
+        # --- 👑 MASTER CORE UI UPGRADE (V14.6: FIXED STAGGER ISSUE) ---
         st.markdown("<h3 style='text-align:center; color:#FFD700; margin-top:30px;'>👑 MASTER CORE (လုံးဘိုင် ၂ လုံး)</h3>", unsafe_allow_html=True)
         if len(super_hot_2) > 0:
-            c_m1, c_m2 = st.columns(2)
-            with c_m1:
-                st.markdown(f"<div style='text-align:right;'><span class='main-num-box'>{super_hot_2[0]}</span></div>", unsafe_allow_html=True)
-            if len(super_hot_2) > 1:
-                with c_m2:
-                    st.markdown(f"<div style='text-align:left;'><span class='main-num-box'>{super_hot_2[1]}</span></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+            for lone in super_hot_2:
+                st.markdown(f"<span class='main-num-box' style='background:#FFD700; color:#000000;'>{lone}</span>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
             
-            st.markdown("<h4 style='text-align:center; color:#A0AEC0; margin-top:15px;'>လုံးဘိုင်နှင့် တွဲဖက်များ</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='text-align:center; color:#A0AEC0; margin-top:20px;'>လုံးဘိုင်နှင့် တွဲဖက်များ</h4>", unsafe_allow_html=True)
             
             partners_1 = get_best_partners(super_hot_2[0], res_p['timeline_used'])
             pairs_1 = [f"{super_hot_2[0]}{super_hot_2[0]}"] + [f"{super_hot_2[0]}{p}" for p in partners_1]
@@ -586,9 +590,9 @@ if st.session_state.get('run_v14'):
             
         st.divider()
         
-        # --- Centered Master Core 6 Kwet (Pattern Matrix Removed from Tab 1) ---
+        # --- Centered Master Core 6 Kwet ---
         st.markdown("<h4 style='text-align:center;'>⚔️ MASTER CORE (၆ ကွက်)</h4>", unsafe_allow_html=True)
-        html_mc = f"<div class='premium-box' style='border-color:#00E5FF; margin: 0 auto; width: 60%;'>"
+        html_mc = f"<div class='premium-box' style='border-color:#00E5FF; margin: 0 auto;'>"
         if len(mc_6_pairs) >= 3:
             html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs[:3]]) + "<br><br>"
             html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs[3:]])
