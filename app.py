@@ -3,6 +3,7 @@ import pandas as pd
 import itertools
 from collections import Counter
 import warnings
+import requests
 
 # --- 🤖 Machine Learning Integration ---
 try:
@@ -22,8 +23,8 @@ if 'authenticated' not in st.session_state:
 
 if not st.session_state.authenticated:
     st.markdown("<br><br><br>", unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align: center; color: #00E5FF; letter-spacing: 2px;'>🤖 THE GOLDEN CROSS (V14.6)</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #A0AEC0;'>ULTIMATE BUG-FREE EDITION</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #00E5FF; letter-spacing: 2px;'>🤖 THE GOLDEN CROSS (V14.7)</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #A0AEC0;'>FULLY AUTOMATED AI SYSTEM</p>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -350,6 +351,31 @@ def get_v14_tri_recommendations(timeline):
             
     return best_lb_l, best_lb_p, best_lb_c
 
+# --- 🌐 Phase 4: API Auto-Fetcher Helper ---
+def fetch_live_2d():
+    try:
+        # Note: Replace with actual Myanmar 2D Live API URL if needed. 
+        # Using a widely known public API structure for Myanmar 2D
+        response = requests.get("https://api.thaistock2d.com/live", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            live_twod = data.get("live", {}).get("twod", "")
+            if live_twod and len(live_twod) == 2:
+                return (int(live_twod[0]), int(live_twod[1]))
+        return None
+    except Exception:
+        return None
+
+# --- 📲 Phase 5: Telegram Sender Helper ---
+def send_telegram_message(token, chat_id, message):
+    if not token or not chat_id: return False
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
+    try:
+        r = requests.post(url, json=payload, timeout=5)
+        return r.status_code == 200
+    except: return False
+
 # --- 📱 UI Component for Analytics Tabs ---
 def render_mode_tab(eval_data, test_size, next_m, next_s, next_cm, next_cs):
     st.markdown("<h4 style='color:#FFD700;'>🔥 Hot Number</h4>", unsafe_allow_html=True)
@@ -397,40 +423,36 @@ def render_mode_tab(eval_data, test_size, next_m, next_s, next_cm, next_cs):
     with st.expander(f"📊 Cold Number မှတ်တမ်းအသေးစိတ်ကြည့်ရန် ({test_size} ပွဲ)"):
         for log in eval_data['cold_logs']: st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
 
-# --- 📱 Sidebar (Data Center: V14.6 Fix Data Overwrite Bug) ---
+# --- 📱 Sidebar (Data Center Fixed Live Entry) ---
 st.sidebar.title("Data Center 📥")
 uploaded_file = st.sidebar.file_uploader("Excel ဖိုင် တင်ရန်", type=["xlsx"])
 
-if 'history' not in st.session_state: 
-    st.session_state.history = []
-if 'last_uploaded' not in st.session_state:
-    st.session_state.last_uploaded = None
+if 'history' not in st.session_state: st.session_state.history = []
+if 'tg_token' not in st.session_state: st.session_state.tg_token = ""
+if 'tg_chat_id' not in st.session_state: st.session_state.tg_chat_id = ""
 
 if uploaded_file is not None:
-    file_details = f"{uploaded_file.name}_{uploaded_file.size}"
-    if st.session_state.last_uploaded != file_details:
-        try:
-            df = pd.read_excel(uploaded_file, engine='openpyxl')
-            df.columns = df.columns.str.strip().str.lower()
-            temp_timeline = []
-            for _, row in df.iterrows():
-                if 'am1' in df.columns and 'am2' in df.columns:
-                    if pd.notna(row['am1']) and pd.notna(row['am2']):
-                        try: temp_timeline.append({'session': 'AM', 'draw': (int(float(row['am1'])), int(float(row['am2'])))})
-                        except ValueError: pass 
-                if 'pm1' in df.columns and 'pm2' in df.columns:
-                    if pd.notna(row['pm1']) and pd.notna(row['pm2']):
-                        try: temp_timeline.append({'session': 'PM', 'draw': (int(float(row['pm1'])), int(float(row['pm2'])))})
-                        except ValueError: pass 
-                            
-            if temp_timeline: 
-                st.session_state.history = temp_timeline
-                st.session_state.last_uploaded = file_details # Save Memory so it doesn't read again
-                st.sidebar.success(f"✅ Data ({len(temp_timeline)}) ပွဲ ဝင်ရောက်ပါပြီ။")
-        except Exception as e: st.sidebar.error(f"❌ Error: {e}")
+    try:
+        df = pd.read_excel(uploaded_file, engine='openpyxl')
+        df.columns = df.columns.str.strip().str.lower()
+        temp_timeline = []
+        for _, row in df.iterrows():
+            if 'am1' in df.columns and 'am2' in df.columns:
+                if pd.notna(row['am1']) and pd.notna(row['am2']):
+                    try: temp_timeline.append({'session': 'AM', 'draw': (int(float(row['am1'])), int(float(row['am2'])))})
+                    except ValueError: pass 
+            if 'pm1' in df.columns and 'pm2' in df.columns:
+                if pd.notna(row['pm1']) and pd.notna(row['pm2']):
+                    try: temp_timeline.append({'session': 'PM', 'draw': (int(float(row['pm1'])), int(float(row['pm2'])))})
+                    except ValueError: pass 
+                        
+        if temp_timeline: 
+            st.session_state.history = temp_timeline
+            st.sidebar.success(f"✅ Data ({len(temp_timeline)}) ပွဲ ဝင်ရောက်ပါပြီ။")
+    except Exception as e: st.sidebar.error(f"❌ Error: {e}")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📝 Live Data Entry (V14.6)")
+st.sidebar.markdown("### 📝 Live Data Entry (V14.7)")
 
 if st.session_state.history:
     last_entry = st.session_state.history[-1]
@@ -441,12 +463,23 @@ if st.session_state.history:
 else:
     default_idx = 0
 
+# --- 🌐 Phase 4: Auto Fetch Button ---
+if st.sidebar.button("🌐 လတ်တလော 2D Data ဆွဲယူမည်", use_container_width=True):
+    fetched_draw = fetch_live_2d()
+    if fetched_draw:
+        new_sess = "AM" if default_idx == 0 else "PM"
+        st.session_state.history.append({'session': new_sess, 'draw': fetched_draw})
+        st.sidebar.success(f"✅ အလိုအလျောက် ဆွဲယူပြီးပါပြီ: {fetched_draw[0]}{fetched_draw[1]}")
+        st.rerun()
+    else:
+        st.sidebar.error("❌ Live Data ဆွဲယူ၍ မရပါ။ (API အချိန်လွန်နေခြင်း သို့မဟုတ် ချိတ်ဆက်မှု အခက်အခဲဖြစ်နိုင်ပါသည်)")
+
 with st.sidebar.form("live_entry_form", clear_on_submit=True):
     c1, c2 = st.columns(2)
     new_top = c1.number_input("ထိပ်စီး", min_value=0, max_value=9, step=1, value=0)
     new_bot = c2.number_input("နောက်ပိတ်", min_value=0, max_value=9, step=1, value=0)
     new_session = st.radio("Session", ["AM", "PM"], index=default_idx, horizontal=True)
-    submitted = st.form_submit_button("➕ အသစ်ထည့်မည်", use_container_width=True)
+    submitted = st.form_submit_button("➕ လက်ဖြင့် အသစ်ထည့်မည်", use_container_width=True)
     
     if submitted:
         st.session_state.history.append({'session': new_session, 'draw': (new_top, new_bot)})
@@ -458,9 +491,16 @@ if st.sidebar.button("↩️ Undo (ပြန်ဖျက်မည်)"):
         if hasattr(st, "rerun"): st.rerun()
         else: st.experimental_rerun()
 
-# --- 📱 Main App UI (V14.6) ---
+# --- 📲 Phase 5: Telegram Config UI ---
+with st.sidebar.expander("⚙️ Telegram Bot Settings"):
+    st.session_state.tg_token = st.text_input("Bot Token", value=st.session_state.tg_token, type="password")
+    st.session_state.tg_chat_id = st.text_input("Chat ID / Group ID", value=st.session_state.tg_chat_id)
+    if st.button("💾 သိမ်းမည်"):
+        st.success("✅ Telegram Settings သိမ်းဆည်းပြီးပါပြီ။")
+
+# --- 📱 Main App UI (V14.7) ---
 st.markdown("<h1 class='neon-text'>THE GOLDEN CROSS</h1>", unsafe_allow_html=True)
-st.markdown("<p class='sub-text'>V14.6 - THE ULTIMATE BUG-FREE EDITION</p>", unsafe_allow_html=True)
+st.markdown("<p class='sub-text'>V14.7 - FULLY AUTOMATED SYSTEM</p>", unsafe_allow_html=True)
 
 if not ML_AVAILABLE: st.error("⚠️ စနစ်တွင် Machine Learning (scikit-learn) မရှိပါ။ `requirements.txt` တွင် ထည့်ထားရန် သေချာပါစေ။")
 
@@ -468,7 +508,7 @@ mode = st.radio("⚙️ Engine Mode", ["🤖 AI Auto Mode", "✍️ Custom Mode"
 custom_lb = 50
 if "Custom" in mode: custom_lb = st.number_input("Backtest ပွဲစဉ်:", value=50)
 
-if st.button("🚀 V14.6 Ultimate Engine ကို Run မည်", use_container_width=True):
+if st.button("🚀 V14.7 Ultimate Engine ကို Run မည်", use_container_width=True):
     if len(st.session_state.history) < 90: st.warning("⚠️ Data အနည်းဆုံး ပွဲ ၉၀ လိုအပ်ပါသည်။")
     else:
         st.session_state.run_v14 = True
@@ -513,42 +553,26 @@ if st.session_state.get('run_v14'):
         ml_top_2 = [ml_picks[0][0], ml_picks[1][0]]
     vip_key = [n for n in ml_top_2 if n in super_hot_2]
 
-    # --- Log Generation ---
-    summary_logs = []
-    ts_p = res_p['test_size']
-    actuals = res_p['actuals']
-    timeline_used = res_p['timeline_used']
-    log_limit = min(10, ts_p)
-    
-    for k in range(1, log_limit + 1):
-        idx = ts_p - log_limit - 1 + k
-        draw = actuals[idx]
-        hist_super_hot_2 = res_l['m3']['mains_hist'][res_l['test_size'] - log_limit - 1 + k]
-        hist_timeline = timeline_used[:len(timeline_used) - log_limit - 1 + k]
-        hist_partner_pairs = []
-        for lone in hist_super_hot_2:
-            partners = get_best_partners(lone, hist_timeline)
-            for p in partners: hist_partner_pairs.extend([f"{lone}{p}", f"{p}{lone}"])
-        is_lone_hit = draw[0] in hist_super_hot_2 or draw[1] in hist_super_hot_2
-        is_history_hit = any(draw == p or draw == p[::-1] for p in set(hist_partner_pairs))
-        hist_p_hot5 = res_p['m1']['mains_hist'][idx] + res_p['m1']['secs_hist'][idx]
-        hist_p_10 = [f"{a}{b}" for a, b in itertools.combinations(hist_p_hot5, 2)]
-        hist_c_hot2 = res_c['m3']['mains_hist'][res_c['test_size'] - log_limit - 1 + k]
-        hist_c_cold2 = res_c['m3']['cm_hist'][res_c['test_size'] - log_limit - 1 + k]
-        hist_mc_6 = [f"{a}{b}" for a, b in itertools.combinations(hist_c_hot2 + hist_c_cold2, 2)]
-        p_hit = any(draw == p or draw == p[::-1] for p in hist_p_10) or any(draw == p or draw == p[::-1] for p in hist_mc_6)
-        
-        if is_history_hit: lone_str = f"✅ ({draw} ဝင်သည်)"
-        elif is_lone_hit: lone_str = "✅ (တွဲဖက် ❌)"
-        else: lone_str = "❌ လွဲ"
-        p_str = "✅" if p_hit else "❌"
-        summary_logs.append(f"{target_session} ပွဲ {(ts_p - log_limit + k):02d} | အဖြေ: [{draw}] | 🛡️ လုံးဘိုင်+တွဲဖက်: {lone_str} | 🌊 အကွက်: {p_str}")
-    summary_logs.reverse()
-
     # --- 📑 Render Tabs ---
-    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Summary", "🌊 Pattern Matrix", "🚀 Deep Trend", "💎 Master Core (AI vs Math)"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Summary (Executive)", "🌊 Pattern Matrix", "🚀 Deep Trend", "💎 Master Core (AI vs Math)"])
     
     with tab1:
+        
+        # --- 🚀 Phase 5: Telegram Broadcast Button ---
+        if st.session_state.tg_token and st.session_state.tg_chat_id:
+            if st.button("🚀 Telegram သို့ VIP ဂဏန်းများ ပို့မည်", type="primary", use_container_width=True):
+                msg_body = f"👑 *THE GOLDEN CROSS (V14.7)* 👑\n🎯 Target Session: *{target_session}*\n\n"
+                if vip_key: msg_body += f"🤖 *Ultra VIP Main:* `{' '.join(vip_key)}`\n\n"
+                msg_body += f"🔥 *Master Core (လုံးဘိုင်):* `{' | '.join(super_hot_2)}`\n"
+                msg_body += f"⚔️ *Master Core (၆ ကွက်):* `{' '.join(mc_6_pairs)}`\n\n"
+                msg_body += "🚀 May the cross be with you!"
+                
+                success = send_telegram_message(st.session_state.tg_token, st.session_state.tg_chat_id, msg_body)
+                if success: st.success("✅ Telegram သို့ အောင်မြင်စွာ ပို့ဆောင်ပြီးပါပြီ!")
+                else: st.error("❌ Telegram ပို့ရန် အခက်အခဲရှိနေပါသည်။ API Token နှင့် Chat ID ကို ပြန်စစ်ပါ။")
+        else:
+            st.info("💡 Telegram Bot ဖြင့် VIP Group သို့ Auto Message ပို့ရန် ဘယ်ဘက် Sidebar အောက်ဆုံးတွင် Bot Settings သွားထည့်ပါ။")
+
         if ml_picks:
             st.markdown("<div class='ai-box'>🤖 <b>Machine Learning Insights:</b> AI Model မှ နောက်ပွဲအတွက် ကြိုတင်ခန့်မှန်းချက် ရာခိုင်နှုန်း<br><br>", unsafe_allow_html=True)
             for digit, prob in ml_picks:
@@ -563,7 +587,7 @@ if st.session_state.get('run_v14'):
             html_sm += "</div>"
             st.markdown(html_sm, unsafe_allow_html=True)
             
-        # --- 👑 MASTER CORE UI UPGRADE (V14.6: FIXED STAGGER ISSUE) ---
+        # --- 👑 MASTER CORE UI UPGRADE (Side-by-side) ---
         st.markdown("<h3 style='text-align:center; color:#FFD700; margin-top:30px;'>👑 MASTER CORE (လုံးဘိုင် ၂ လုံး)</h3>", unsafe_allow_html=True)
         if len(super_hot_2) > 0:
             st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
@@ -604,9 +628,6 @@ if st.session_state.get('run_v14'):
         c_disp_1 = super_cold_2[0] if len(super_cold_2) > 0 else "-"
         c_disp_2 = super_cold_2[1] if len(super_cold_2) > 1 else "-"
         st.markdown(f"<div class='cyan-note'>💡 <b>မှတ်ချက်:</b> အအေးဇုန်မှ ရုတ်တရက် ပြန်လည်ရုန်းထွက်နိုင်ချေ အများဆုံးဖြစ်သော ({target_session} Best Cold) လုံးဘိုင်များမှာ <b>[ {c_disp_1} ]</b> နှင့် <b>[ {c_disp_2} ]</b> ဖြစ်ပါသည်။</div>", unsafe_allow_html=True)
-        
-        with st.expander(f"📊 နောက်ဆုံး 10 ပွဲ ({target_session} သီးသန့်) မှတ်တမ်းအသေးစိတ်ကြည့်ရန်"):
-            for log in summary_logs: st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
 
     with tab2:
         st.markdown("### 🌊 PATTERN MATRIX (၁၀ ကွက်)")
