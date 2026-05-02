@@ -52,7 +52,7 @@ st.markdown("""
     
     .premium-box { background-color: #000000; border: 1px solid #FFD700; border-radius: 8px; padding: 20px 10px; text-align: center; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(255, 215, 0, 0.15);}
     .premium-num { font-size: 26px; color: #FFFFFF; font-weight: 900; letter-spacing: 2px; }
-    .main-num-box { font-size: 40px; color: #FFD700; font-weight: 900; background: #1A1C23; padding: 15px 30px; border-radius: 10px; border: 2px solid #FFD700; display: inline-block; margin: 10px;}
+    .main-num-box { font-size: 40px; color: #000000; font-weight: 900; background: #FFD700; padding: 15px 30px; border-radius: 10px; border: 2px solid #FFD700; display: inline-block; margin: 10px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);}
     .sec-num-box { font-size: 22px; color: #A0AEC0; font-weight: bold; background: #1A1C23; padding: 8px 18px; border-radius: 8px; border: 1px solid #555; display: inline-block; margin: 5px;}
     
     .super-box { background: linear-gradient(145deg, #1A1C23, #0B0E14); border: 2px solid #00E5FF; border-radius: 12px; padding: 25px 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);}
@@ -321,8 +321,6 @@ def get_v14_tri_recommendations(timeline):
     
     total_draws = len(timeline)
     max_possible_lb = max(10, total_draws - 45)
-    
-    # --- 🛠️ BUG FIX: Restored V14 Original Grid Search Array ---
     lookbacks_to_test = [lb for lb in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] if lb <= max_possible_lb]
     if not lookbacks_to_test: return 10, 10, 10
             
@@ -358,8 +356,8 @@ def render_mode_tab(eval_data, test_size, next_m, next_s, next_cm, next_cs):
     st.markdown(f"""
     <div style='text-align:center; margin-bottom: 15px;'>
         <div style='color:#FFD700; font-size:16px; font-weight:bold; margin-bottom:5px;'>လုံးဘိုင် ၂ လုံး</div>
-        <div class='main-num-box' style='padding:10px 25px;'>{next_m[0] if len(next_m)>0 else '-'}</div>
-        <div class='main-num-box' style='padding:10px 25px;'>{next_m[1] if len(next_m)>1 else '-'}</div>
+        <div class='main-num-box' style='background:#1A1C23; color:#FFD700; padding:10px 25px;'>{next_m[0] if len(next_m)>0 else '-'}</div>
+        <div class='main-num-box' style='background:#1A1C23; color:#FFD700; padding:10px 25px;'>{next_m[1] if len(next_m)>1 else '-'}</div>
         <div style='color:#A0AEC0; font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Master key</div>
         <div class='sec-num-box'>{next_s[0] if len(next_s)>0 else '-'}</div>
         <div class='sec-num-box'>{next_s[1] if len(next_s)>1 else '-'}</div>
@@ -381,8 +379,8 @@ def render_mode_tab(eval_data, test_size, next_m, next_s, next_cm, next_cs):
     st.markdown(f"""
     <div style='text-align:center; margin-bottom: 15px;'>
         <div style='color:#00E5FF; font-size:16px; font-weight:bold; margin-bottom:5px;'>လုံးဘိုင် ၂ လုံး</div>
-        <div class='main-num-box' style='border-color:#00E5FF; color:#00E5FF; padding:10px 25px;'>{next_cm[0] if len(next_cm)>0 else '-'}</div>
-        <div class='main-num-box' style='border-color:#00E5FF; color:#00E5FF; padding:10px 25px;'>{next_cm[1] if len(next_cm)>1 else '-'}</div>
+        <div class='main-num-box' style='background:#1A1C23; border-color:#00E5FF; color:#00E5FF; padding:10px 25px;'>{next_cm[0] if len(next_cm)>0 else '-'}</div>
+        <div class='main-num-box' style='background:#1A1C23; border-color:#00E5FF; color:#00E5FF; padding:10px 25px;'>{next_cm[1] if len(next_cm)>1 else '-'}</div>
         <div style='color:#A0AEC0; font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Master key</div>
         <div class='sec-num-box'>{next_cs[0] if len(next_cs)>0 else '-'}</div>
         <div class='sec-num-box'>{next_cs[1] if len(next_cs)>1 else '-'}</div>
@@ -437,7 +435,6 @@ if st.session_state.history:
 else:
     default_idx = 0
 
-# --- 🛠️ BUG FIX: Live Data Entry Form (Ensures Data Saves Correctly) ---
 with st.sidebar.form("live_entry_form"):
     c1, c2 = st.columns(2)
     new_top = c1.number_input("ထိပ်စီး", min_value=0, max_value=9, step=1, value=0)
@@ -502,8 +499,6 @@ if st.session_state.get('run_v14'):
     
     pm_hot5 = res_p['m1_next']['m'] + res_p['m1_next']['s']
     pm_10_pairs = [f"{a}{b}" for a, b in itertools.combinations(pm_hot5, 2)]
-    all_pairs = list(set(pm_10_pairs + mc_6_pairs))
-    super_main_pairs = [p for p in all_pairs if p[0] in super_hot_2 or p[1] in super_hot_2]
     
     # --- ML Integration ---
     ml_picks, ml_top_2 = [], []
@@ -562,49 +557,46 @@ if st.session_state.get('run_v14'):
             html_sm += "</div>"
             st.markdown(html_sm, unsafe_allow_html=True)
             
-        # --- 🛠️ BUG FIX: Master Core Rename & Box Style ---
-        st.markdown("### 👑 MASTER CORE (လုံးဘိုင် ၂ လုံး)")
+        # --- 👑 MASTER CORE UI UPGRADE ---
+        st.markdown("<h3 style='text-align:center; color:#FFD700; margin-top:30px;'>👑 MASTER CORE (လုံးဘိုင် ၂ လုံး)</h3>", unsafe_allow_html=True)
         if len(super_hot_2) > 0:
-            st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-            for lone in super_hot_2:
-                st.markdown(f"<span class='main-num-box'>{lone}</span>", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            partner_pairs = []
-            for lone in super_hot_2:
-                partners = get_best_partners(lone, res_p['timeline_used'])
-                for p in partners: partner_pairs.append(f"{lone}{p}")
-
+            c_m1, c_m2 = st.columns(2)
+            with c_m1:
+                st.markdown(f"<div style='text-align:right;'><span class='main-num-box'>{super_hot_2[0]}</span></div>", unsafe_allow_html=True)
+            if len(super_hot_2) > 1:
+                with c_m2:
+                    st.markdown(f"<div style='text-align:left;'><span class='main-num-box'>{super_hot_2[1]}</span></div>", unsafe_allow_html=True)
+            
             st.markdown("<h4 style='text-align:center; color:#A0AEC0; margin-top:15px;'>လုံးဘိုင်နှင့် တွဲဖက်များ</h4>", unsafe_allow_html=True)
+            
+            partners_1 = get_best_partners(super_hot_2[0], res_p['timeline_used'])
+            pairs_1 = [f"{super_hot_2[0]}{super_hot_2[0]}"] + [f"{super_hot_2[0]}{p}" for p in partners_1]
+            
+            pairs_2 = []
+            if len(super_hot_2) > 1:
+                partners_2 = get_best_partners(super_hot_2[1], res_p['timeline_used'])
+                pairs_2 = [f"{super_hot_2[1]}{super_hot_2[1]}"] + [f"{super_hot_2[1]}{p}" for p in partners_2]
+
             html_partners = "<div class='premium-box'>"
-            if partner_pairs:
-                html_partners += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in partner_pairs])
-            else:
-                html_partners += "<span style='color: gray;'>တွဲဖက်များ မတွေ့ရှိပါ</span>"
+            html_partners += "<div style='margin-bottom:15px;'>" + "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in pairs_1]) + "</div>"
+            if pairs_2:
+                html_partners += "<div>" + "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in pairs_2]) + "</div>"
             html_partners += "</div>"
             st.markdown(html_partners, unsafe_allow_html=True)
             
         st.divider()
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("#### 🌊 PATTERN MATRIX (၁၀ ကွက်)")
-            html_pm = f"<div class='premium-box'>"
-            html_pm += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in pm_10_pairs[:5]]) + "<br><br>"
-            html_pm += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in pm_10_pairs[5:]])
-            html_pm += "</div>"
-            st.markdown(html_pm, unsafe_allow_html=True)
-            
-        with c2:
-            st.markdown("#### ⚔️ MASTER CORE (၆ ကွက်)")
-            html_mc = f"<div class='premium-box' style='border-color:#00E5FF;'>"
-            if len(mc_6_pairs) >= 3:
-                html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs[:3]]) + "<br><br>"
-                html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs[3:]])
-            else:
-                html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs])
-            html_mc += "</div>"
-            st.markdown(html_mc, unsafe_allow_html=True)
-            
+        
+        # --- Centered Master Core 6 Kwet (Pattern Matrix Removed from Tab 1) ---
+        st.markdown("<h4 style='text-align:center;'>⚔️ MASTER CORE (၆ ကွက်)</h4>", unsafe_allow_html=True)
+        html_mc = f"<div class='premium-box' style='border-color:#00E5FF; margin: 0 auto; width: 60%;'>"
+        if len(mc_6_pairs) >= 3:
+            html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs[:3]]) + "<br><br>"
+            html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs[3:]])
+        else:
+            html_mc += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in mc_6_pairs])
+        html_mc += "</div>"
+        st.markdown(html_mc, unsafe_allow_html=True)
+        
         c_disp_1 = super_cold_2[0] if len(super_cold_2) > 0 else "-"
         c_disp_2 = super_cold_2[1] if len(super_cold_2) > 1 else "-"
         st.markdown(f"<div class='cyan-note'>💡 <b>မှတ်ချက်:</b> အအေးဇုန်မှ ရုတ်တရက် ပြန်လည်ရုန်းထွက်နိုင်ချေ အများဆုံးဖြစ်သော ({target_session} Best Cold) လုံးဘိုင်များမှာ <b>[ {c_disp_1} ]</b> နှင့် <b>[ {c_disp_2} ]</b> ဖြစ်ပါသည်။</div>", unsafe_allow_html=True)
@@ -613,7 +605,6 @@ if st.session_state.get('run_v14'):
             for log in summary_logs: st.markdown(f"<div class='log-card'>{log}</div>", unsafe_allow_html=True)
 
     with tab2:
-        # --- 🛠️ BUG FIX: Moving Pattern Matrix 10-Kwek to Top of Tab 2 ---
         st.markdown("### 🌊 PATTERN MATRIX (၁၀ ကွက်)")
         html_pm_tab2 = "<div class='premium-box'>"
         html_pm_tab2 += "".join([f"<span style='margin:0 10px;'><span class='premium-num'>{p}</span></span>" for p in pm_10_pairs[:5]]) + "<br><br>"
