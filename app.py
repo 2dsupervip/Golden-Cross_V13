@@ -5,8 +5,6 @@ from collections import Counter
 import warnings
 import requests
 from datetime import datetime
-import json
-import os
 
 # --- 🤖 Machine Learning Integration ---
 try:
@@ -432,20 +430,10 @@ if 'history' not in st.session_state:
     st.session_state.history = []
 if 'last_uploaded' not in st.session_state:
     st.session_state.last_uploaded = None
-
-# --- ⚙️ Telegram JSON Config Initialization ---
-TG_CONFIG_FILE = "telegram_config.json"
-if 'tg_token' not in st.session_state or 'tg_chat_id' not in st.session_state: 
+if 'tg_token' not in st.session_state: 
     st.session_state.tg_token = ""
+if 'tg_chat_id' not in st.session_state: 
     st.session_state.tg_chat_id = ""
-    if os.path.exists(TG_CONFIG_FILE):
-        try:
-            with open(TG_CONFIG_FILE, "r") as f:
-                tg_data = json.load(f)
-                st.session_state.tg_token = tg_data.get("token", "")
-                st.session_state.tg_chat_id = tg_data.get("chat_id", "")
-        except Exception:
-            pass
 
 if uploaded_file is not None:
     file_id = f"{uploaded_file.name}_{uploaded_file.size}"
@@ -509,19 +497,12 @@ if st.sidebar.button("↩️ Undo (ပြန်ဖျက်မည်)"):
         if hasattr(st, "rerun"): st.rerun()
         else: st.experimental_rerun()
 
-# --- 📲 Phase 5: Telegram Config UI (With JSON Auto Save/Load) ---
+# --- 📲 Phase 5: Telegram Config UI ---
 with st.sidebar.expander("⚙️ Telegram Bot Settings"):
-    new_token = st.text_input("Bot Token", value=st.session_state.tg_token, type="password")
-    new_chat_id = st.text_input("Chat ID / Group ID", value=st.session_state.tg_chat_id)
-    if st.button("💾 အမြဲတမ်း သိမ်းမည်"):
-        st.session_state.tg_token = new_token
-        st.session_state.tg_chat_id = new_chat_id
-        try:
-            with open(TG_CONFIG_FILE, "w") as f:
-                json.dump({"token": new_token, "chat_id": new_chat_id}, f)
-            st.success("✅ Telegram Settings ကို `telegram_config.json` ဖြင့် အမြဲတမ်း သိမ်းဆည်းပြီးပါပြီ။ နောက်တစ်ကြိမ်တွင် Auto ပြန်လည်ဆွဲယူပေးပါမည်။")
-        except Exception as e:
-            st.error(f"❌ သိမ်းဆည်းရာတွင် အမှားအယွင်းရှိပါသည်: {e}")
+    st.session_state.tg_token = st.text_input("Bot Token", value=st.session_state.tg_token, type="password")
+    st.session_state.tg_chat_id = st.text_input("Chat ID / Group ID", value=st.session_state.tg_chat_id)
+    if st.button("💾 သိမ်းမည်"):
+        st.success("✅ Telegram Settings သိမ်းဆည်းပြီးပါပြီ။")
 
 # --- 📱 Main App UI (V14.9 Final) ---
 st.markdown("<h1 class='neon-text'>THE GOLDEN CROSS</h1>", unsafe_allow_html=True)
@@ -548,8 +529,7 @@ if st.session_state.get('run_v14'):
     st.success(f"🕒 **Temporal Lock Activated:** AI သည် **({target_session})** သမိုင်းကြောင်း သီးသန့်ကို ခွဲထုတ်၍ ခန့်မှန်းနေပါသည်။")
     
     if "Auto" in st.session_state.selected_mode:
-        fixed_tf = 10 if target_session == "AM" else 40
-        lb_l = lb_p = lb_c = fixed_tf
+        lb_l, lb_p, lb_c = get_v14_tri_recommendations(target_timeline)
         res_l = run_backend_engine(target_timeline, lb_l)
         res_p = run_backend_engine(target_timeline, lb_p)
         res_c = run_backend_engine(target_timeline, lb_c)
